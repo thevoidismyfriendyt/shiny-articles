@@ -1,0 +1,4 @@
+config.json
+nasa_cache.json
+__pycache__/
+*.pyc

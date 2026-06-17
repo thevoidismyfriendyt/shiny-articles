@@ -1,0 +1,1522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shiny Articles</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* Minimal themed scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+    * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --accent: #6c63ff;
+      --accent2: #a78bfa;
+      --text: #e2e8f0;
+      --muted: #8892a4;
+      --border: #2d3250;
+      --card-hover: #1e2236;
+      --danger: #f87171;
+      --success: #34d399;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--accent2);
+      padding: 1.1rem 0;
+      white-space: nowrap;
+    }
+    .logo span { color: var(--accent); }
+    nav {
+      display: flex;
+      gap: 0.25rem;
+    }
+    nav button {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 0.95rem;
+      padding: 0.6rem 1.1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    nav button.active,
+    nav button:hover { background: var(--surface2); color: var(--text); }
+    nav button.active { color: var(--accent2); }
+    nav button.special.active { color: #fbbf24; }
+    nav button.special:hover { color: #fde68a; }
+
+    /* ── Main ── */
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+
+    .tab { display: none; }
+    .tab.active { display: block; }
+
+    /* ── API key setup ── */
+    #setup-banner {
+      background: linear-gradient(135deg, #1e1b4b, #1a1d27);
+      border: 1px solid var(--accent);
+      border-radius: 14px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      display: none;
+    }
+    #setup-banner h2 { font-size: 1.2rem; margin-bottom: 0.5rem; color: var(--accent2); }
+    #setup-banner p { color: var(--muted); font-size: 0.9rem; margin-bottom: 1rem; line-height: 1.6; }
+    #setup-banner a { color: var(--accent2); }
+    .key-row { display: flex; gap: 0.75rem; }
+    .key-row input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.95rem;
+      padding: 0.65rem 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .key-row input:focus { border-color: var(--accent); }
+    .btn {
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.95rem;
+      padding: 0.65rem 1.4rem;
+      font-weight: 600;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn:hover { opacity: 0.88; }
+    .btn:active { transform: scale(0.97); }
+    .btn.secondary {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    /* ── Refresh row ── */
+    .feed-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .feed-header h1 { font-size: 1.5rem; }
+    .feed-header .meta { color: var(--muted); font-size: 0.88rem; }
+
+    /* ── Article grid ── */
+    #articles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: border-color 0.2s, background 0.2s, transform 0.15s;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+    }
+    .card:hover {
+      border-color: var(--accent);
+      background: var(--card-hover);
+      transform: translateY(-2px);
+    }
+    .card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      background: var(--surface2);
+    }
+    .card-body { padding: 1rem 1.1rem 1.2rem; flex: 1; display: flex; flex-direction: column; gap: 0.45rem; }
+    .card-source {
+      font-size: 0.75rem;
+      color: var(--accent2);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+      line-height: 1.45;
+      color: var(--text);
+    }
+    .card-desc {
+      font-size: 0.86rem;
+      color: var(--muted);
+      line-height: 1.55;
+      flex: 1;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .card-date { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
+
+    /* ── Status messages ── */
+    #feed-status {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+    #feed-status .big { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    #feed-status .hint { font-size: 0.88rem; margin-top: 0.5rem; }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Settings tab ── */
+    .settings-section { margin-bottom: 2.5rem; }
+    .settings-section h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--accent2);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.6rem;
+    }
+
+    /* API key in settings */
+    .api-key-field { display: flex; gap: 0.75rem; max-width: 520px; }
+    .api-key-field input {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.95rem;
+      padding: 0.65rem 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .api-key-field input:focus { border-color: var(--accent); }
+    .settings-hint { font-size: 0.84rem; color: var(--muted); margin-top: 0.5rem; line-height: 1.6; }
+    .settings-hint a { color: var(--accent2); }
+
+    /* API key list */
+    .key-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.55rem 0.9rem;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+    }
+    .key-item .key-label {
+      flex: 1;
+      font-family: monospace;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+    .key-item .key-idx {
+      font-size: 0.75rem;
+      color: var(--accent2);
+      font-weight: 600;
+      min-width: 3rem;
+    }
+    .key-delete-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 0 0.2rem;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+    .key-delete-btn:hover { color: var(--danger); }
+
+    /* Keys dropdown (>3 keys) */
+    .keys-dropdown {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+    .keys-dropdown summary {
+      background: var(--surface2);
+      padding: 0.7rem 1rem;
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: var(--text);
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      user-select: none;
+    }
+    .keys-dropdown summary::-webkit-details-marker { display: none; }
+    .keys-dropdown summary::after {
+      content: '▾';
+      color: var(--muted);
+      transition: transform 0.2s;
+    }
+    .keys-dropdown[open] summary::after { transform: rotate(-180deg); }
+    .keys-dropdown .keys-inner { padding: 0.6rem 0.6rem 0.2rem; }
+
+    /* New key input slot */
+    .new-key-slot {
+      display: flex;
+      gap: 0.6rem;
+      margin-bottom: 0.5rem;
+      align-items: center;
+    }
+    .new-key-slot input {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.9rem;
+      padding: 0.6rem 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+      font-family: monospace;
+    }
+    .new-key-slot input:focus { border-color: var(--accent); }
+    .new-key-slot .remove-slot-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1.2rem;
+      padding: 0 0.2rem;
+      transition: color 0.15s;
+    }
+    .new-key-slot .remove-slot-btn:hover { color: var(--danger); }
+
+    /* Interest chips */
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+    .chip {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 999px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.88rem;
+      padding: 0.42rem 1rem;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .chip:hover { border-color: var(--accent2); color: var(--text); }
+    .chip.selected {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .settings-actions {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      margin-top: 1.5rem;
+    }
+    .save-status { font-size: 0.88rem; color: var(--success); opacity: 0; transition: opacity 0.3s; }
+    .save-status.show { opacity: 1; }
+
+    /* ── Star button ── */
+    .star-btn {
+      position: absolute;
+      top: 0.6rem;
+      right: 0.6rem;
+      background: rgba(15,17,23,0.75);
+      backdrop-filter: blur(4px);
+      border: none;
+      border-radius: 50%;
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.1rem;
+      line-height: 1;
+      transition: transform 0.15s, background 0.15s;
+      z-index: 2;
+    }
+    .star-btn:hover { transform: scale(1.2); background: rgba(15,17,23,0.92); }
+    .star-btn.saved { color: #fbbf24; }
+    .star-btn:not(.saved) { color: #8892a4; }
+    .card { position: relative; }
+
+    /* AOD star */
+    .aod-star-btn {
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.88rem;
+      padding: 0.5rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.15s;
+    }
+    .aod-star-btn:hover { border-color: #fbbf24; color: #fbbf24; }
+    .aod-star-btn.saved { border-color: #fbbf24; color: #fbbf24; background: rgba(251,191,36,0.08); }
+
+    /* ── Article of the Day ── */
+    #aod-status {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+    #aod-status .big { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    #aod-status .hint { font-size: 0.88rem; margin-top: 0.5rem; }
+
+    .aod-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.75rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .aod-header h1 { font-size: 1.5rem; }
+    .aod-resets { font-size: 0.82rem; color: var(--muted); margin-top: 0.2rem; }
+
+    .aod-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      overflow: hidden;
+      max-width: 780px;
+      margin: 0 auto;
+      box-shadow: 0 8px 40px rgba(108,99,255,0.10);
+    }
+    .aod-card img {
+      width: 100%;
+      height: 340px;
+      object-fit: cover;
+      background: var(--surface2);
+      display: block;
+    }
+    .aod-body { padding: 2rem 2.2rem 2.2rem; }
+    .aod-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: linear-gradient(90deg, #f59e0b, #fbbf24);
+      color: #1a1a1a;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.28rem 0.8rem;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+    }
+    .aod-source {
+      font-size: 0.8rem;
+      color: var(--accent2);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.6rem;
+    }
+    .aod-title {
+      font-size: 1.65rem;
+      font-weight: 700;
+      line-height: 1.35;
+      color: var(--text);
+      margin-bottom: 1rem;
+    }
+    .aod-desc {
+      font-size: 1rem;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 1.4rem;
+    }
+    .aod-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .aod-date { font-size: 0.82rem; color: var(--muted); }
+    .aod-link {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.9rem;
+      padding: 0.6rem 1.4rem;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .aod-link:hover { opacity: 0.85; }
+
+    /* ── Article Reader ── */
+    #reader-overlay {
+      position: fixed; inset: 0; z-index: 500;
+      background: #0d0f18;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #reader-overlay.open { display: flex; }
+
+    .reader-topbar {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.9rem 1.5rem;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .reader-back {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 1.4rem;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+    .reader-back:hover { color: var(--text); }
+    .reader-topbar-title {
+      font-size: 0.9rem;
+      color: var(--muted);
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .reader-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 2.5rem 1.5rem 4rem;
+    }
+    .reader-body {
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    .reader-meta {
+      font-size: 0.8rem;
+      color: var(--accent2);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.6rem;
+    }
+    .reader-title {
+      font-size: 1.9rem;
+      font-weight: 700;
+      line-height: 1.3;
+      margin-bottom: 1.5rem;
+      color: var(--text);
+    }
+    .reader-content {
+      font-size: 1.05rem;
+      line-height: 1.85;
+      color: #c8d0dc;
+    }
+    .reader-content p { margin-bottom: 1.2rem; }
+    .reader-content h1, .reader-content h2, .reader-content h3 {
+      color: var(--text);
+      margin: 1.8rem 0 0.8rem;
+      line-height: 1.35;
+    }
+    .reader-content h1 { font-size: 1.4rem; }
+    .reader-content h2 { font-size: 1.2rem; }
+    .reader-content h3 { font-size: 1.05rem; }
+    .reader-content img {
+      max-width: 100%;
+      border-radius: 8px;
+      margin: 1rem 0;
+    }
+    .reader-content a { color: var(--accent2); }
+    .reader-content ul, .reader-content ol { padding-left: 1.5rem; margin-bottom: 1.2rem; }
+    .reader-content li { margin-bottom: 0.4rem; }
+    .reader-content blockquote {
+      border-left: 3px solid var(--accent);
+      padding-left: 1rem;
+      color: var(--muted);
+      margin: 1.2rem 0;
+    }
+    .reader-content figure { margin: 1.2rem 0; }
+    .reader-content figcaption { font-size: 0.82rem; color: var(--muted); margin-top: 0.3rem; }
+
+    #reader-loading {
+      text-align: center;
+      padding: 5rem 2rem;
+      color: var(--muted);
+    }
+    #reader-error {
+      background: rgba(248,113,113,0.08);
+      border: 1px solid var(--danger);
+      border-radius: 10px;
+      padding: 1.2rem 1.4rem;
+      color: var(--danger);
+      font-size: 0.9rem;
+      margin-bottom: 1.5rem;
+      display: none;
+    }
+
+    /* ── NASA Pictures tab ── */
+    #nasa-status {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--muted);
+    }
+    #nasa-status .big { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    #nasa-status .hint { font-size: 0.88rem; margin-top: 0.5rem; }
+
+    .nasa-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.75rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .nasa-header h1 { font-size: 1.5rem; }
+    .nasa-header .meta { font-size: 0.88rem; color: var(--muted); margin-top: 0.2rem; }
+
+    #nasa-grid {
+      columns: 3;
+      column-gap: 1rem;
+    }
+    @media (max-width: 900px) { #nasa-grid { columns: 2; } }
+    @media (max-width: 560px) { #nasa-grid { columns: 1; } }
+
+    .nasa-card {
+      break-inside: avoid;
+      margin-bottom: 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.15s;
+    }
+    .nasa-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .nasa-card img {
+      width: 100%;
+      display: block;
+      background: var(--surface2);
+    }
+    .nasa-card-body { padding: 0.8rem 1rem 1rem; }
+    .nasa-card-date { font-size: 0.72rem; color: var(--accent2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem; }
+    .nasa-card-title { font-size: 0.92rem; font-weight: 600; line-height: 1.4; color: var(--text); }
+    .nasa-card-copy { font-size: 0.75rem; color: var(--muted); margin-top: 0.2rem; }
+
+    /* Lightbox */
+    #lightbox {
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,0.92);
+      display: none;
+      align-items: flex-start;
+      justify-content: center;
+      overflow-y: auto;
+      padding: 1.5rem;
+      cursor: zoom-out;
+    }
+    #lightbox.open { display: flex; }
+    .lb-inner {
+      max-width: 1100px;
+      width: 100%;
+      cursor: default;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin: auto;
+      padding-bottom: 1rem;
+    }
+    .lb-inner img {
+      width: 100%;
+      max-height: 80vh;
+      object-fit: contain;
+      border-radius: 10px;
+    }
+    .lb-inner iframe {
+      width: 100%;
+      aspect-ratio: 16/9;
+      border: none;
+      border-radius: 10px;
+    }
+    .lb-info { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+    .lb-text h2 { font-size: 1.2rem; margin-bottom: 0.4rem; }
+    .lb-text p { font-size: 0.88rem; color: var(--muted); line-height: 1.6; max-width: 700px;
+      display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+    .lb-text .lb-meta { font-size: 0.78rem; color: var(--accent2); margin-bottom: 0.4rem; }
+    .lb-actions { display: flex; gap: 0.6rem; flex-shrink: 0; }
+    .lb-close {
+      position: fixed; top: 1rem; right: 1.2rem;
+      background: none; border: none; color: #fff;
+      font-size: 2rem; cursor: pointer; line-height: 1; z-index: 1001;
+    }
+
+    /* ── Saved Articles tab ── */
+    .saved-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .saved-header h1 { font-size: 1.5rem; }
+    .saved-count { color: var(--muted); font-size: 0.88rem; margin-top: 0.2rem; }
+    #saved-status {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--muted);
+    }
+    #saved-status .big { font-size: 2.5rem; margin-bottom: 0.75rem; }
+
+    @media (max-width: 600px) {
+      header { gap: 1rem; padding: 0 1rem; }
+      main { padding: 1.25rem 1rem; }
+      #articles-grid { grid-template-columns: 1fr; }
+      .aod-card img { height: 200px; }
+      .aod-body { padding: 1.2rem 1.2rem 1.5rem; }
+      .aod-title { font-size: 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Shiny <span>Articles</span></div>
+  <nav>
+    <button id="tab-feed-btn" class="active" onclick="showTab('feed')">Feed</button>
+    <button id="tab-aod-btn" class="special" onclick="showTab('aod')">★ Article of the Day</button>
+    <button id="tab-saved-btn" onclick="showTab('saved')">Saved Articles</button>
+    <button id="tab-nasa-btn" onclick="showTab('nasa')">NASA Images 📷</button>
+    <button id="tab-settings-btn" onclick="showTab('settings')">Settings</button>
+  </nav>
+</header>
+
+<main>
+  <!-- Feed tab -->
+  <div id="tab-feed" class="tab active">
+    <div id="setup-banner">
+      <h2>Set up your NewsAPI key</h2>
+      <p>
+        To fetch articles, you need a free API key from
+        <a href="https://newsapi.org/register" target="_blank">newsapi.org/register</a>.
+        It takes about 30 seconds — just sign up and copy your key.
+      </p>
+      <div class="key-row">
+        <input id="banner-key" type="text" placeholder="Paste your API key here…" />
+        <button class="btn" onclick="saveBannerKey()">Save Key</button>
+      </div>
+    </div>
+
+    <div class="feed-header">
+      <div>
+        <h1>Your Feed</h1>
+        <div class="meta" id="feed-meta"></div>
+      </div>
+      <button class="btn" onclick="loadArticles()">↺ Refresh</button>
+    </div>
+
+    <div id="feed-status"></div>
+    <div id="articles-grid"></div>
+  </div>
+
+  <!-- Article of the Day tab -->
+  <div id="tab-aod" class="tab">
+    <div class="aod-header">
+      <div>
+        <h1>Article of the Day</h1>
+        <div class="aod-resets" id="aod-resets"></div>
+      </div>
+    </div>
+    <div id="aod-status"></div>
+    <div id="aod-container"></div>
+  </div>
+
+  <!-- NASA Images tab -->
+  <div id="tab-nasa" class="tab">
+    <div class="nasa-header">
+      <div>
+        <h1>NASA Images 📷</h1>
+        <div class="meta" id="nasa-meta">Astronomy Picture of the Day · last 30 days</div>
+      </div>
+      <button class="btn" onclick="loadNasa(true)">↺ Refresh</button>
+    </div>
+    <div id="nasa-status"></div>
+    <div id="nasa-grid"></div>
+  </div>
+
+  <!-- Article Reader -->
+  <div id="reader-overlay">
+    <div class="reader-topbar">
+      <button class="reader-back" onclick="closeReader()" title="Back">←</button>
+      <div class="reader-topbar-title" id="reader-topbar-title"></div>
+      <button class="btn secondary" style="font-size:0.82rem;padding:0.4rem 0.9rem;" onclick="openReaderExternal()">Open in browser</button>
+    </div>
+    <div class="reader-scroll">
+      <div class="reader-body">
+        <div id="reader-loading"><div class="spinner"></div>Loading article…</div>
+        <div id="reader-error"></div>
+        <div class="reader-meta" id="reader-meta"></div>
+        <div class="reader-title" id="reader-title" style="display:none"></div>
+        <div class="reader-content" id="reader-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lightbox -->
+  <div id="lightbox" onclick="closeLightbox()">
+    <button class="lb-close" onclick="closeLightbox()">✕</button>
+    <div class="lb-inner" onclick="event.stopPropagation()">
+      <div id="lb-media"></div>
+      <div class="lb-info">
+        <div class="lb-text">
+          <div class="lb-meta" id="lb-meta"></div>
+          <h2 id="lb-title"></h2>
+          <p id="lb-desc"></p>
+        </div>
+        <div class="lb-actions">
+          <a id="lb-download-link" class="btn" download style="display:none">⬇ Download</a>
+          <a id="lb-hd-link" class="btn secondary" target="_blank" rel="noopener noreferrer" style="display:none">View HD</a>
+          <a id="lb-nasa-link" class="btn secondary" target="_blank" rel="noopener noreferrer">NASA Page</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Saved Articles tab -->
+  <div id="tab-saved" class="tab">
+    <div class="saved-header">
+      <div>
+        <h1>Saved Articles</h1>
+        <div class="saved-count" id="saved-count"></div>
+      </div>
+    </div>
+    <div id="saved-status"></div>
+    <div id="saved-grid" class="articles-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.25rem;"></div>
+  </div>
+
+  <!-- Settings tab -->
+  <div id="tab-settings" class="tab">
+    <div class="settings-section">
+      <h2>API Keys</h2>
+      <p class="settings-hint" style="margin-bottom:1rem;">
+        Add one or more free keys from <a href="https://newsapi.org/register" target="_blank">newsapi.org/register</a>.
+        Each free key allows 100 requests/day — extra keys act as backups when one runs out.
+      </p>
+      <div id="keys-list"></div>
+      <div id="new-key-slots"></div>
+      <button class="btn secondary" id="add-key-btn" onclick="addKeySlot()" style="margin-top:0.75rem;">+ Add API Key</button>
+      <div id="keys-save-row" style="display:none;margin-top:0.75rem;display:flex;gap:0.75rem;align-items:center;">
+        <button class="btn" onclick="saveNewKeys()">Save New Keys</button>
+        <span class="save-status" id="keys-save-status">Saved!</span>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h2>NASA API Key</h2>
+      <div id="nasa-key-display"></div>
+      <div class="api-key-field" id="nasa-key-field">
+        <input type="text" id="nasa-key-input" placeholder="Paste NASA API key here…" autocomplete="off" spellcheck="false" style="font-family:monospace;" />
+        <button class="btn" onclick="saveNasaKey()">Save</button>
+      </div>
+      <p class="settings-hint">
+        Get a free key at <a href="https://api.nasa.gov" target="_blank">api.nasa.gov</a> — click "Generate API Key".
+        Without a key, a limited demo key is used (30 req/hour).
+      </p>
+    </div>
+
+    <div class="settings-section">
+      <h2>Your Interests</h2>
+      <div class="chips" id="interest-chips"></div>
+      <div class="settings-actions">
+        <button class="btn" onclick="saveInterests()">Save Interests</button>
+        <button class="btn secondary" onclick="selectAll()">Select All</button>
+        <button class="btn secondary" onclick="clearAll()">Clear All</button>
+        <span class="save-status" id="save-status">Saved!</span>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  const INTERESTS = {{ interests | tojson }};
+  let selected = new Set();
+  let savedUrls = new Set();
+
+  async function init() {
+    const [cfg, savedRes] = await Promise.all([
+      fetch('/api/config').then(r => r.json()),
+      fetch('/api/saved').then(r => r.json()),
+    ]);
+    selected = new Set(cfg.selected_interests || []);
+    savedUrls = new Set((savedRes.saved || []).map(a => a.url));
+
+    renderChips();
+    renderKeysList(cfg.api_keys || []);
+    renderNasaKeyDisplay(cfg);
+
+    if (!cfg.has_api_key) {
+      document.getElementById('setup-banner').style.display = 'block';
+    }
+
+    if (cfg.has_api_key) {
+      if (selected.size > 0) loadArticles();
+      else showFeedStatus('emoji', '✦', 'Pick some interests in Settings to get started.',
+        '<span class="hint">Click <b>Settings</b> above and choose topics you care about.</span>');
+    } else {
+      showFeedStatus('emoji', '🔑', 'No API key yet.',
+        '<span class="hint">Paste your NewsAPI key above to get started.</span>');
+    }
+  }
+
+  function showTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    document.getElementById('tab-' + name + '-btn').classList.add('active');
+    if (name === 'aod') loadAod();
+    if (name === 'nasa') loadNasa();
+    if (name === 'saved') loadSaved();
+  }
+
+  /* ── Saved articles ── */
+
+  async function toggleSave(article, btn) {
+    event.preventDefault();
+    event.stopPropagation();
+    const isSaved = savedUrls.has(article.url);
+    if (isSaved) {
+      await fetch('/api/saved', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: article.url }),
+      });
+      savedUrls.delete(article.url);
+    } else {
+      await fetch('/api/saved', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(article),
+      });
+      savedUrls.add(article.url);
+    }
+    // Update all star buttons for this URL across the page
+    document.querySelectorAll(`.star-btn[data-url="${CSS.escape(article.url)}"]`).forEach(b => {
+      b.classList.toggle('saved', !isSaved);
+      b.title = isSaved ? 'Save article' : 'Unsave article';
+    });
+    // Refresh saved tab if open
+    if (document.getElementById('tab-saved').classList.contains('active')) {
+      loadSaved();
+    }
+  }
+
+  async function loadSaved() {
+    const res = await fetch('/api/saved');
+    const data = await res.json();
+    const articles = data.saved || [];
+    savedUrls = new Set(articles.map(a => a.url));
+
+    const statusEl = document.getElementById('saved-status');
+    const grid = document.getElementById('saved-grid');
+    const countEl = document.getElementById('saved-count');
+
+    if (articles.length === 0) {
+      statusEl.innerHTML = '<div class="big">☆</div><div>No saved articles yet.</div><span style="font-size:0.88rem;margin-top:0.5rem;display:block">Star any article in your Feed or Article of the Day to save it here.</span>';
+      statusEl.style.display = 'block';
+      grid.innerHTML = '';
+      countEl.textContent = '';
+      return;
+    }
+
+    statusEl.style.display = 'none';
+    countEl.textContent = `${articles.length} saved`;
+    grid.innerHTML = '';
+    articles.forEach(a => renderCard(a, grid));
+  }
+
+  /* ── Article card builder ── */
+
+  function renderCard(a, grid) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.cursor = 'pointer';
+
+    const date = a.publishedAt
+      ? new Date(a.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : '';
+
+    card.innerHTML = `
+      ${a.image ? `<img src="${escHtml(a.image)}" alt="" loading="lazy" onerror="this.style.display='none'">` : ''}
+      <button class="star-btn ${savedUrls.has(a.url) ? 'saved' : ''}"
+              data-url="${escHtml(a.url)}"
+              title="${savedUrls.has(a.url) ? 'Unsave article' : 'Save article'}">★</button>
+      <div class="card-body">
+        ${a.source ? `<div class="card-source">${escHtml(a.source)}</div>` : ''}
+        <div class="card-title">${escHtml(a.title)}</div>
+        ${a.description ? `<div class="card-desc">${escHtml(a.description)}</div>` : ''}
+        ${date ? `<div class="card-date">${date}</div>` : ''}
+      </div>
+    `;
+
+    card.addEventListener('click', () => openReader(a));
+
+    const star = card.querySelector('.star-btn');
+    star.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleSave(a, star);
+    });
+
+    grid.appendChild(card);
+  }
+
+  /* ── Feed ── */
+
+  function showFeedStatus(type, icon, title, extra = '') {
+    const el = document.getElementById('feed-status');
+    if (type === 'spinner') {
+      el.innerHTML = `<div class="spinner"></div>${title}`;
+    } else {
+      el.innerHTML = `<div class="big">${icon}</div><div>${title}</div>${extra}`;
+    }
+    el.style.display = 'block';
+    document.getElementById('articles-grid').innerHTML = '';
+  }
+
+  async function loadArticles() {
+    showFeedStatus('spinner', '', 'Fetching articles…');
+    document.getElementById('feed-meta').textContent = '';
+
+    const res = await fetch('/api/articles');
+    const data = await res.json();
+
+    if (data.error === 'no_api_key') {
+      showFeedStatus('emoji', '🔑', 'No API key set.',
+        '<span class="hint">Add your NewsAPI key in the <b>Settings</b> tab.</span>');
+      return;
+    }
+    if (data.error === 'no_interests') {
+      showFeedStatus('emoji', '✦', 'No interests selected.',
+        '<span class="hint">Go to <b>Settings</b> and choose some topics.</span>');
+      return;
+    }
+    if (data.error) {
+      showFeedStatus('emoji', '⚠', 'Error: ' + data.error, '');
+      return;
+    }
+
+    const articles = data.articles;
+    document.getElementById('feed-status').style.display = 'none';
+    document.getElementById('feed-meta').textContent = `${articles.length} articles`;
+
+    const grid = document.getElementById('articles-grid');
+    grid.innerHTML = '';
+    articles.forEach(a => renderCard(a, grid));
+  }
+
+  /* ── Article of the Day ── */
+
+  function next5am() {
+    const now = new Date();
+    const candidate = new Date(now);
+    candidate.setHours(5, 0, 0, 0);
+    if (now >= candidate) candidate.setDate(candidate.getDate() + 1);
+    const diff = candidate - now;
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    return `${h}h ${m}m`;
+  }
+
+  let aodLoaded = false;
+  let aodArticle = null;
+
+  async function loadAod() {
+    if (aodLoaded) {
+      // Refresh star state
+      if (aodArticle) updateAodStar(aodArticle);
+      return;
+    }
+    const statusEl = document.getElementById('aod-status');
+    const container = document.getElementById('aod-container');
+    const resetsEl = document.getElementById('aod-resets');
+
+    statusEl.innerHTML = '<div class="spinner"></div>Finding today\'s top story…';
+    statusEl.style.display = 'block';
+    container.innerHTML = '';
+
+    const res = await fetch('/api/article-of-day');
+    const data = await res.json();
+
+    statusEl.style.display = 'none';
+
+    if (data.error === 'no_api_key') {
+      statusEl.innerHTML = '<div class="big">🔑</div><div>No API key set.</div><span class="hint">Add your NewsAPI key in <b>Settings</b>.</span>';
+      statusEl.style.display = 'block';
+      return;
+    }
+    if (data.error) {
+      statusEl.innerHTML = `<div class="big">⚠</div><div>${escHtml(data.error)}</div>`;
+      statusEl.style.display = 'block';
+      return;
+    }
+
+    aodLoaded = true;
+    aodArticle = data.article;
+    resetsEl.textContent = `Resets in ${next5am()} · at 5:00 AM`;
+
+    const a = aodArticle;
+    const date = a.publishedAt
+      ? new Date(a.publishedAt).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+      : '';
+    const isSaved = savedUrls.has(a.url);
+
+    container.innerHTML = `
+      <div class="aod-card">
+        ${a.image ? `<img src="${escHtml(a.image)}" alt="" onerror="this.style.display='none'">` : ''}
+        <div class="aod-body">
+          <div class="aod-badge">★ &nbsp;Article of the Day</div>
+          ${a.source ? `<div class="aod-source">${escHtml(a.source)}</div>` : ''}
+          <div class="aod-title">${escHtml(a.title)}</div>
+          ${a.description ? `<div class="aod-desc">${escHtml(a.description)}</div>` : ''}
+          <div class="aod-footer">
+            ${date ? `<div class="aod-date">${date}</div>` : '<div></div>'}
+            <div style="display:flex;gap:0.75rem;align-items:center;">
+              <button class="aod-star-btn ${isSaved ? 'saved' : ''}" id="aod-star-btn">
+                ★ ${isSaved ? 'Saved' : 'Save'}
+              </button>
+              <button class="aod-link" onclick="openReader(${JSON.stringify(a).replace(/</g,'\\u003c')})">Read Full Article →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('aod-star-btn').addEventListener('click', async () => {
+      const isSaved = savedUrls.has(a.url);
+      if (isSaved) {
+        await fetch('/api/saved', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: a.url }) });
+        savedUrls.delete(a.url);
+      } else {
+        await fetch('/api/saved', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(a) });
+        savedUrls.add(a.url);
+      }
+      updateAodStar(a);
+    });
+  }
+
+  function updateAodStar(a) {
+    const btn = document.getElementById('aod-star-btn');
+    if (!btn) return;
+    const isSaved = savedUrls.has(a.url);
+    btn.classList.toggle('saved', isSaved);
+    btn.textContent = `★ ${isSaved ? 'Saved' : 'Save'}`;
+  }
+
+  /* ── Settings ── */
+
+  function renderChips() {
+    const container = document.getElementById('interest-chips');
+    container.innerHTML = '';
+    INTERESTS.forEach(interest => {
+      const chip = document.createElement('div');
+      chip.className = 'chip' + (selected.has(interest) ? ' selected' : '');
+      chip.textContent = interest;
+      chip.onclick = () => {
+        if (selected.has(interest)) selected.delete(interest);
+        else selected.add(interest);
+        chip.classList.toggle('selected');
+      };
+      container.appendChild(chip);
+    });
+  }
+
+  function selectAll() { INTERESTS.forEach(i => selected.add(i)); renderChips(); }
+  function clearAll() { selected.clear(); renderChips(); }
+
+  async function saveInterests() {
+    await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ selected_interests: [...selected] }),
+    });
+    const el = document.getElementById('save-status');
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2000);
+  }
+
+  /* ── API key management ── */
+
+  let newKeySlotCount = 0;
+
+  function renderKeysList(maskedKeys) {
+    const container = document.getElementById('keys-list');
+    container.innerHTML = '';
+    if (!maskedKeys.length) return;
+
+    const items = maskedKeys.map((k, i) => `
+      <div class="key-item">
+        <span class="key-idx">Key ${i + 1}</span>
+        <span class="key-label">${escHtml(k)}</span>
+        <button class="key-delete-btn" title="Remove key" onclick="deleteKey(${i})">×</button>
+      </div>
+    `).join('');
+
+    if (maskedKeys.length > 3) {
+      container.innerHTML = `
+        <details class="keys-dropdown">
+          <summary>${maskedKeys.length} API keys saved</summary>
+          <div class="keys-inner">${items}</div>
+        </details>`;
+    } else {
+      container.innerHTML = items;
+    }
+  }
+
+  function addKeySlot() {
+    newKeySlotCount++;
+    const saveRow = document.getElementById('keys-save-row');
+    saveRow.style.display = 'flex';
+
+    const slotsEl = document.getElementById('new-key-slots');
+    const id = `new-key-${newKeySlotCount}`;
+    const slot = document.createElement('div');
+    slot.className = 'new-key-slot';
+    slot.id = `slot-${id}`;
+    slot.innerHTML = `
+      <input type="text" id="${id}" placeholder="Paste API key here…" autocomplete="off" spellcheck="false" />
+      <button class="remove-slot-btn" title="Remove" onclick="removeSlot('slot-${id}')">×</button>
+    `;
+    slotsEl.appendChild(slot);
+    document.getElementById(id).focus();
+  }
+
+  function removeSlot(slotId) {
+    document.getElementById(slotId)?.remove();
+    if (!document.getElementById('new-key-slots').children.length) {
+      document.getElementById('keys-save-row').style.display = 'none';
+    }
+  }
+
+  async function saveNewKeys() {
+    const inputs = document.querySelectorAll('#new-key-slots input');
+    const newKeys = [...inputs].map(i => i.value.trim()).filter(Boolean);
+    if (!newKeys.length) return;
+
+    // Fetch current keys count to append
+    const cfg = await fetch('/api/config').then(r => r.json());
+    const currentCount = cfg.api_keys_count || 0;
+
+    // We send all keys: existing (by count, server keeps them) + new ones
+    // Use a dedicated merge endpoint — POST /api/keys/add for new ones
+    await fetch('/api/keys/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keys: newKeys }),
+    });
+
+    // Refresh display
+    const updated = await fetch('/api/config').then(r => r.json());
+    renderKeysList(updated.api_keys || []);
+    document.getElementById('new-key-slots').innerHTML = '';
+    document.getElementById('keys-save-row').style.display = 'none';
+    newKeySlotCount = 0;
+
+    if (updated.has_api_key) {
+      document.getElementById('setup-banner').style.display = 'none';
+    }
+
+    const el = document.getElementById('keys-save-status');
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2000);
+  }
+
+  async function deleteKey(idx) {
+    if (!confirm('Remove this API key?')) return;
+    await fetch(`/api/keys/${idx}`, { method: 'DELETE' });
+    const cfg = await fetch('/api/config').then(r => r.json());
+    renderKeysList(cfg.api_keys || []);
+    if (!cfg.has_api_key) {
+      document.getElementById('setup-banner').style.display = 'block';
+    }
+  }
+
+  async function saveBannerKey() {
+    const val = document.getElementById('banner-key').value.trim();
+    if (!val) return;
+    await fetch('/api/keys/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keys: [val] }),
+    });
+    document.getElementById('setup-banner').style.display = 'none';
+    const cfg = await fetch('/api/config').then(r => r.json());
+    renderKeysList(cfg.api_keys || []);
+    loadArticles();
+  }
+
+  /* ── Article Reader ── */
+
+  let readerCurrentUrl = '';
+
+  async function openReader(article) {
+    readerCurrentUrl = article.url;
+
+    // Show overlay immediately with loading state
+    document.getElementById('reader-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    document.getElementById('reader-loading').style.display = 'block';
+    document.getElementById('reader-error').style.display = 'none';
+    document.getElementById('reader-title').style.display = 'none';
+    document.getElementById('reader-content').innerHTML = '';
+    document.getElementById('reader-topbar-title').textContent = article.source || '';
+
+    const meta = [article.source, article.publishedAt
+      ? new Date(article.publishedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+      : ''].filter(Boolean).join(' · ');
+    document.getElementById('reader-meta').textContent = meta;
+    const res = await fetch('/api/read?url=' + encodeURIComponent(article.url));
+    const data = await res.json();
+
+    document.getElementById('reader-loading').style.display = 'none';
+
+    if (data.error) {
+      const errEl = document.getElementById('reader-error');
+      errEl.textContent = data.error + ' — you can still open the article in your browser using the button above.';
+      errEl.style.display = 'block';
+      // Show what we have from the card
+      document.getElementById('reader-title').textContent = article.title || '';
+      document.getElementById('reader-title').style.display = 'block';
+      if (article.description) {
+        document.getElementById('reader-content').innerHTML = `<p>${escHtml(article.description)}</p>`;
+      }
+      return;
+    }
+
+    document.getElementById('reader-title').textContent = data.title || article.title || '';
+    document.getElementById('reader-title').style.display = 'block';
+    // Sanitise: strip script tags from extracted HTML
+    const clean = (data.content || '').replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '');
+    document.getElementById('reader-content').innerHTML = clean;
+  }
+
+  function closeReader() {
+    document.getElementById('reader-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function openReaderExternal() {
+    if (readerCurrentUrl) window.open(readerCurrentUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeReader(); closeLightbox(); }
+  });
+
+  /* ── NASA Pictures ── */
+
+  let nasaLoaded = false;
+
+  async function loadNasa(force = false) {
+    if (nasaLoaded && !force) return;
+    nasaLoaded = true; // set immediately to block concurrent calls
+
+    const statusEl = document.getElementById('nasa-status');
+    const grid = document.getElementById('nasa-grid');
+    statusEl.innerHTML = '<div class="spinner"></div>Loading space photos…';
+    statusEl.style.display = 'block';
+    grid.innerHTML = '';
+
+    const res = await fetch('/api/nasa-pictures');
+    const data = await res.json();
+    statusEl.style.display = 'none';
+
+    if (data.error) {
+      nasaLoaded = false; // allow retry on error
+      statusEl.innerHTML = `<div class="big">🔭</div><div>${escHtml(data.error)}</div><span class="hint">Check your NASA API key in Settings, or try again later.</span>`;
+      statusEl.style.display = 'block';
+      return;
+    }
+    const pics = data.pictures || [];
+    document.getElementById('nasa-meta').textContent = `Astronomy Picture of the Day · ${pics.length} photos`;
+
+    pics.forEach(p => {
+      const thumb = p.media_type === 'video' ? p.thumbnail_url : p.url;
+      if (!thumb) return;
+
+      const card = document.createElement('div');
+      card.className = 'nasa-card';
+      card.innerHTML = `
+        <img src="${escHtml(thumb)}" alt="${escHtml(p.title || '')}" loading="lazy" onerror="this.parentElement.style.display='none'">
+        <div class="nasa-card-body">
+          <div class="nasa-card-date">${p.date || ''} ${p.media_type === 'video' ? '· 📹 Video' : ''}</div>
+          <div class="nasa-card-title">${escHtml(p.title || '')}</div>
+          ${p.copyright ? `<div class="nasa-card-copy">© ${escHtml(p.copyright.trim())}</div>` : ''}
+        </div>
+      `;
+      card.addEventListener('click', () => openLightbox(p));
+      grid.appendChild(card);
+    });
+  }
+
+  function openLightbox(p) {
+    const mediaEl = document.getElementById('lb-media');
+    if (p.media_type === 'video') {
+      // Convert YouTube watch URL to embed URL if needed
+      let src = p.url;
+      const ytMatch = src.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?]+)/);
+      if (ytMatch) src = `https://www.youtube.com/embed/${ytMatch[1]}`;
+      mediaEl.innerHTML = `<iframe src="${escHtml(src)}" allowfullscreen></iframe>`;
+    } else {
+      const imgSrc = p.hdurl || p.url;
+      mediaEl.innerHTML = `<img src="${escHtml(imgSrc)}" alt="${escHtml(p.title || '')}">`;
+    }
+
+    document.getElementById('lb-meta').textContent = p.date || '';
+    document.getElementById('lb-title').textContent = p.title || '';
+    document.getElementById('lb-desc').textContent = p.explanation || '';
+
+    const dlLink = document.getElementById('lb-download-link');
+    const hdLink = document.getElementById('lb-hd-link');
+    if (p.media_type !== 'video') {
+      const imgUrl = p.hdurl || p.url;
+      const filename = (p.title || 'nasa-image').replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.jpg';
+      dlLink.href = imgUrl;
+      dlLink.download = filename;
+      dlLink.style.display = '';
+      if (p.hdurl) {
+        hdLink.href = p.hdurl;
+        hdLink.style.display = '';
+      } else {
+        hdLink.style.display = 'none';
+      }
+    } else {
+      dlLink.style.display = 'none';
+      hdLink.style.display = 'none';
+    }
+    document.getElementById('lb-nasa-link').href = `https://apod.nasa.gov/apod/ap${(p.date || '').replace(/-/g, '').slice(2)}.html`;
+
+    document.getElementById('lightbox').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('open');
+    document.getElementById('lb-media').innerHTML = '';
+    document.body.style.overflow = '';
+  }
+
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+  /* ── NASA key settings ── */
+
+  async function renderNasaKeyDisplay(cfg) {
+    const display = document.getElementById('nasa-key-display');
+    const field = document.getElementById('nasa-key-field');
+    if (cfg.has_nasa_key) {
+      display.innerHTML = `
+        <div class="key-item" style="margin-bottom:0.75rem;">
+          <span class="key-idx">NASA Key</span>
+          <span class="key-label">${escHtml(cfg.nasa_key_masked)}</span>
+          <button class="key-delete-btn" title="Remove" onclick="deleteNasaKey()">×</button>
+        </div>`;
+      field.style.display = 'none';
+    } else {
+      display.innerHTML = '';
+      field.style.display = 'flex';
+    }
+  }
+
+  async function saveNasaKey() {
+    const val = document.getElementById('nasa-key-input').value.trim();
+    if (!val) return;
+    await fetch('/api/nasa-key', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: val }),
+    });
+    document.getElementById('nasa-key-input').value = '';
+    const cfg = await fetch('/api/config').then(r => r.json());
+    renderNasaKeyDisplay(cfg);
+    nasaLoaded = false; // force refresh next time tab opens
+  }
+
+  async function deleteNasaKey() {
+    if (!confirm('Remove NASA API key?')) return;
+    await fetch('/api/nasa-key', { method: 'DELETE' });
+    const cfg = await fetch('/api/config').then(r => r.json());
+    renderNasaKeyDisplay(cfg);
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  init();
+</script>
+</body>
+</html>
