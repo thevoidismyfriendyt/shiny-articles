@@ -581,7 +581,8 @@
     .folder-tab.active { background: var(--surface2); color: var(--text); border-color: var(--accent); }
 
     /* ── Trending ── */
-    .trending-header { margin-bottom: 2rem; }
+    .trending-header { }
+    #keys-save-row { display: flex; }
     .trending-header h1 { font-size: 1.5rem; }
     .trending-header .meta { color: var(--muted); font-size: 0.88rem; margin-top: 0.3rem; }
     .trending-section { margin-bottom: 2.5rem; }
@@ -716,9 +717,12 @@
 
   <!-- ── Trending tab ── -->
   <div id="tab-trending" class="tab">
-    <div class="trending-header">
-      <h1>🔥 Trending</h1>
-      <div class="meta">Articles you've read most — updated as you browse</div>
+    <div class="trending-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:2rem;">
+      <div>
+        <h1>🔥 Trending</h1>
+        <div class="meta">Articles you've read most — updated as you browse</div>
+      </div>
+      <button class="btn secondary" onclick="refreshTrending()">↺ Refresh</button>
     </div>
     <div id="trending-status"></div>
     <div id="trending-weekly-section" class="trending-section">
@@ -757,7 +761,7 @@
       <div id="keys-list"></div>
       <div id="new-key-slots"></div>
       <button class="btn secondary" id="add-key-btn" onclick="addKeySlot()" style="margin-top:0.75rem;">+ Add API Key</button>
-      <div id="keys-save-row" style="display:none;margin-top:0.75rem;display:flex;gap:0.75rem;align-items:center;">
+      <div id="keys-save-row" style="display:none;margin-top:0.75rem;gap:0.75rem;align-items:center;flex-wrap:wrap;">
         <button class="btn" onclick="saveNewKeys()">Save New Keys</button>
         <span class="save-status" id="keys-save-status">Saved!</span>
       </div>
@@ -873,7 +877,6 @@ let currentFolder = 'all';
 // Reader state
 let readerCurrentUrl     = '';
 let readerCurrentArticle = null;
-let savedScrollPos       = 0;
 
 // ── Theme ──────────────────────────────────────────────────────────────────
 function initTheme() {
@@ -995,12 +998,12 @@ function updateReactionButtons(url) {
   });
 }
 
-function renderReactionButtons(url, small = true) {
+function renderReactionButtons(url) {
   const reactions = (articleMeta[url] || {}).reactions || {};
   return REACTION_KEYS.map((k, i) =>
-    `<button class="${small ? 'reaction-btn' : 'reader-reaction-btn'} ${reactions[k] ? 'active' : ''}"
+    `<button class="reaction-btn ${reactions[k] ? 'active' : ''}"
       data-url="${escHtml(url)}" data-key="${k}"
-      onclick="event.stopPropagation();toggleReaction('${escHtml(url)}','${k}')"
+      onclick="event.stopPropagation();toggleReaction(this.dataset.url,this.dataset.key)"
       title="${REACTIONS[i]}">${REACTIONS[i]}</button>`
   ).join('');
 }
@@ -1011,34 +1014,48 @@ function renderReaderReactions(url) {
   const reactions = (articleMeta[url] || {}).reactions || {};
   bar.innerHTML = REACTION_KEYS.map((k, i) =>
     `<button class="reader-reaction-btn ${reactions[k] ? 'active' : ''}" data-key="${k}"
-      onclick="toggleReaction('${escHtml(url)}','${k}')"
+      onclick="toggleReaction(readerCurrentUrl,this.dataset.key)"
       title="${REACTIONS[i]}">${REACTIONS[i]}</button>`
   ).join('');
 }
 
 // ── Share ──────────────────────────────────────────────────────────────────
+function copyText(text) {
+  // Modern clipboard API (needs HTTPS or localhost)
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text).then(() => true).catch(() => legacyCopy(text));
+  }
+  return Promise.resolve(legacyCopy(text));
+}
+
+function legacyCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  const ok = document.execCommand('copy');
+  document.body.removeChild(ta);
+  return ok;
+}
+
 async function shareArticle() {
-  const url = readerCurrentUrl;
+  const url   = readerCurrentUrl;
   const title = readerCurrentArticle?.title || '';
   if (navigator.share) {
     try { await navigator.share({ title, url }); return; } catch {}
   }
-  try {
-    await navigator.clipboard.writeText(url);
-    showToast('🔗 Link copied to clipboard!');
-  } catch {
-    showToast('Could not copy link');
-  }
+  const ok = await copyText(url);
+  showToast(ok ? '🔗 Link copied to clipboard!' : 'Could not copy link');
 }
 
 async function shareCardArticle(url, title) {
   if (navigator.share) {
     try { await navigator.share({ title, url }); return; } catch {}
   }
-  try {
-    await navigator.clipboard.writeText(url);
-    showToast('🔗 Link copied!');
-  } catch {}
+  const ok = await copyText(url);
+  showToast(ok ? '🔗 Link copied!' : 'Could not copy link');
 }
 
 // ── Saved articles ──────────────────────────────────────────────────────────
@@ -1574,6 +1591,11 @@ function renderRelatedArticles(article) {
 
 // ── Trending ──────────────────────────────────────────────────────────────
 let trendingLoaded = false;
+
+function refreshTrending() {
+  trendingLoaded = false;
+  loadTrending();
+}
 
 async function loadTrending() {
   if (trendingLoaded) return;
