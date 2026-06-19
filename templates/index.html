@@ -933,6 +933,10 @@ function escHtml(str) {
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function escAttrJson(obj) {
+  return JSON.stringify(obj).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+}
+
 function readTime(text) {
   const words = (text || '').trim().split(/\s+/).length;
   return Math.max(1, Math.ceil(words / 200));
@@ -1402,7 +1406,7 @@ async function loadAod() {
             <button class="aod-star-btn ${isSaved ? 'saved' : ''}" id="aod-star-btn">
               ★ ${isSaved ? 'Saved' : 'Save'}
             </button>
-            <button class="aod-link" onclick="openReader(${JSON.stringify(a).replace(/</g,'\\u003c')})">Read Full Article →</button>
+            <button class="aod-link" onclick="openReader(${escAttrJson(a)})">Read Full Article →</button>
           </div>
         </div>
       </div>
@@ -1578,7 +1582,7 @@ function renderRelatedArticles(article) {
   const relEl = document.getElementById('reader-related');
   relEl.innerHTML = `<h3>Related Articles</h3><div class="related-list">${
     scored.map(({ a }) => `
-      <div class="related-item" onclick="openReader(${JSON.stringify(a).replace(/</g,'\\u003c')})">
+      <div class="related-item" onclick="openReader(${escAttrJson(a)})">
         ${a.image ? `<img class="related-img" src="${escHtml(a.image)}" alt="" onerror="this.style.display='none'" loading="lazy">` : ''}
         <div class="related-info">
           ${a.source ? `<div class="related-source">${escHtml(a.source)}</div>` : ''}
