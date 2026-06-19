@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Shiny Articles</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
+  <link rel="manifest" href="/static/manifest.json">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* Minimal themed scrollbar */
     ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
@@ -27,6 +27,17 @@
       --card-hover: #1e2236;
       --danger: #f87171;
       --success: #34d399;
+      --reader-font-size: 1.05rem;
+    }
+
+    body.light {
+      --bg: #f0f4f8;
+      --surface: #ffffff;
+      --surface2: #e8edf3;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #cbd5e1;
+      --card-hover: #f1f5f9;
     }
 
     body {
@@ -34,19 +45,21 @@
       color: var(--text);
       font-family: 'Segoe UI', system-ui, sans-serif;
       min-height: 100vh;
+      transition: background 0.2s, color 0.2s;
     }
 
     /* ── Header ── */
     header {
       background: var(--surface);
       border-bottom: 1px solid var(--border);
-      padding: 0 2rem;
+      padding: 0 1.5rem;
       display: flex;
       align-items: center;
-      gap: 2rem;
+      gap: 1rem;
       position: sticky;
       top: 0;
       z-index: 100;
+      flex-wrap: wrap;
     }
     .logo {
       font-size: 1.4rem;
@@ -58,17 +71,20 @@
     .logo span { color: var(--accent); }
     nav {
       display: flex;
-      gap: 0.25rem;
+      gap: 0.2rem;
+      flex: 1;
+      flex-wrap: wrap;
     }
     nav button {
       background: none;
       border: none;
       color: var(--muted);
-      font-size: 0.95rem;
-      padding: 0.6rem 1.1rem;
+      font-size: 0.92rem;
+      padding: 0.55rem 0.95rem;
       border-radius: 8px;
       cursor: pointer;
       transition: all 0.2s;
+      white-space: nowrap;
     }
     nav button.active,
     nav button:hover { background: var(--surface2); color: var(--text); }
@@ -76,17 +92,30 @@
     nav button.special.active { color: #fbbf24; }
     nav button.special:hover { color: #fde68a; }
 
+    .header-actions { display: flex; align-items: center; gap: 0.5rem; margin-left: auto; }
+    .icon-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 0.4rem 0.65rem;
+      transition: all 0.15s;
+      line-height: 1;
+    }
+    .icon-btn:hover { color: var(--text); border-color: var(--accent); }
+
     /* ── Main ── */
     main {
       max-width: 1100px;
       margin: 0 auto;
       padding: 2rem 1.5rem;
     }
-
     .tab { display: none; }
     .tab.active { display: block; }
 
-    /* ── API key setup ── */
+    /* ── Setup banner ── */
     #setup-banner {
       background: linear-gradient(135deg, #1e1b4b, #1a1d27);
       border: 1px solid var(--accent);
@@ -111,6 +140,7 @@
       transition: border-color 0.2s;
     }
     .key-row input:focus { border-color: var(--accent); }
+
     .btn {
       background: var(--accent);
       border: none;
@@ -121,15 +151,67 @@
       padding: 0.65rem 1.4rem;
       font-weight: 600;
       transition: opacity 0.2s, transform 0.1s;
+      white-space: nowrap;
     }
     .btn:hover { opacity: 0.88; }
     .btn:active { transform: scale(0.97); }
-    .btn.secondary {
-      background: var(--surface2);
+    .btn.secondary { background: var(--surface2); color: var(--text); }
+    .btn.danger-btn { background: var(--danger); }
+
+    /* ── Feed controls (search + filter chips) ── */
+    .feed-controls {
+      margin-bottom: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .search-input-wrap { position: relative; }
+    .search-input-wrap input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
       color: var(--text);
+      font-size: 0.95rem;
+      padding: 0.7rem 1rem 0.7rem 2.5rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-input-wrap input:focus { border-color: var(--accent); }
+    .search-input-wrap::before {
+      content: '🔍';
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.85rem;
+      pointer-events: none;
+    }
+    .feed-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .feed-chip {
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 999px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.8rem;
+      padding: 0.3rem 0.85rem;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .feed-chip:hover { border-color: var(--accent2); color: var(--text); }
+    .feed-chip.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 600;
     }
 
-    /* ── Refresh row ── */
+    /* ── Feed header ── */
     .feed-header {
       display: flex;
       align-items: center;
@@ -142,9 +224,9 @@
     .feed-header .meta { color: var(--muted); font-size: 0.88rem; }
 
     /* ── Article grid ── */
-    #articles-grid {
+    #articles-grid, #saved-grid, #trending-grid, #weekly-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
       gap: 1.25rem;
     }
 
@@ -157,221 +239,61 @@
       flex-direction: column;
       transition: border-color 0.2s, background 0.2s, transform 0.15s;
       cursor: pointer;
-      text-decoration: none;
       color: inherit;
+      position: relative;
     }
-    .card:hover {
-      border-color: var(--accent);
-      background: var(--card-hover);
-      transform: translateY(-2px);
-    }
-    .card img {
-      width: 100%;
-      height: 180px;
-      object-fit: cover;
-      background: var(--surface2);
-    }
-    .card-body { padding: 1rem 1.1rem 1.2rem; flex: 1; display: flex; flex-direction: column; gap: 0.45rem; }
+    .card:hover { border-color: var(--accent); background: var(--card-hover); transform: translateY(-2px); }
+    .card.archived-card { opacity: 0.6; }
+    .card img { width: 100%; height: 180px; object-fit: cover; background: var(--surface2); }
+    .card-body { padding: 0.9rem 1.1rem 0.75rem; flex: 1; display: flex; flex-direction: column; gap: 0.4rem; }
+    .card-top-row { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
     .card-source {
-      font-size: 0.75rem;
-      color: var(--accent2);
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+      font-size: 0.72rem; color: var(--accent2); font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
     }
-    .card-title {
-      font-size: 1rem;
-      font-weight: 600;
-      line-height: 1.45;
-      color: var(--text);
-    }
+    .card-read-time { font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
+    .card-title { font-size: 1rem; font-weight: 600; line-height: 1.45; color: var(--text); }
     .card-desc {
-      font-size: 0.86rem;
-      color: var(--muted);
-      line-height: 1.55;
-      flex: 1;
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+      font-size: 0.86rem; color: var(--muted); line-height: 1.55; flex: 1;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
     }
-    .card-date { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
-
-    /* ── Status messages ── */
-    #feed-status {
-      text-align: center;
-      padding: 4rem 2rem;
-      color: var(--muted);
-      font-size: 1rem;
-    }
-    #feed-status .big { font-size: 2.5rem; margin-bottom: 0.75rem; }
-    #feed-status .hint { font-size: 0.88rem; margin-top: 0.5rem; }
-    .spinner {
-      width: 40px; height: 40px;
-      border: 3px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      margin: 0 auto 1rem;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── Settings tab ── */
-    .settings-section { margin-bottom: 2.5rem; }
-    .settings-section h2 {
-      font-size: 1.1rem;
-      font-weight: 600;
-      margin-bottom: 1rem;
-      color: var(--accent2);
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 0.6rem;
-    }
-
-    /* API key in settings */
-    .api-key-field { display: flex; gap: 0.75rem; max-width: 520px; }
-    .api-key-field input {
-      flex: 1;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      font-size: 0.95rem;
-      padding: 0.65rem 1rem;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    .api-key-field input:focus { border-color: var(--accent); }
-    .settings-hint { font-size: 0.84rem; color: var(--muted); margin-top: 0.5rem; line-height: 1.6; }
-    .settings-hint a { color: var(--accent2); }
-
-    /* API key list */
-    .key-item {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.55rem 0.9rem;
-      margin-bottom: 0.5rem;
-      font-size: 0.9rem;
-    }
-    .key-item .key-label {
-      flex: 1;
-      font-family: monospace;
-      color: var(--muted);
-      letter-spacing: 0.04em;
-    }
-    .key-item .key-idx {
-      font-size: 0.75rem;
-      color: var(--accent2);
-      font-weight: 600;
-      min-width: 3rem;
-    }
-    .key-delete-btn {
-      background: none;
-      border: none;
-      color: var(--muted);
-      cursor: pointer;
-      font-size: 1.1rem;
-      padding: 0 0.2rem;
-      line-height: 1;
-      transition: color 0.15s;
-    }
-    .key-delete-btn:hover { color: var(--danger); }
-
-    /* Keys dropdown (>3 keys) */
-    .keys-dropdown {
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      overflow: hidden;
-      margin-bottom: 0.5rem;
-    }
-    .keys-dropdown summary {
-      background: var(--surface2);
-      padding: 0.7rem 1rem;
-      cursor: pointer;
-      font-size: 0.9rem;
-      color: var(--text);
-      list-style: none;
+    .card-footer {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      user-select: none;
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--border);
     }
-    .keys-dropdown summary::-webkit-details-marker { display: none; }
-    .keys-dropdown summary::after {
-      content: '▾';
-      color: var(--muted);
-      transition: transform 0.2s;
-    }
-    .keys-dropdown[open] summary::after { transform: rotate(-180deg); }
-    .keys-dropdown .keys-inner { padding: 0.6rem 0.6rem 0.2rem; }
+    .card-date { font-size: 0.75rem; color: var(--muted); }
+    .card-actions { display: flex; gap: 0.3rem; align-items: center; }
 
-    /* New key input slot */
-    .new-key-slot {
-      display: flex;
-      gap: 0.6rem;
-      margin-bottom: 0.5rem;
-      align-items: center;
-    }
-    .new-key-slot input {
-      flex: 1;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
+    /* ── Reaction buttons ── */
+    .reaction-btn {
+      background: none;
+      border: none;
       font-size: 0.9rem;
-      padding: 0.6rem 0.9rem;
-      outline: none;
-      transition: border-color 0.2s;
-      font-family: monospace;
+      cursor: pointer;
+      padding: 0.2rem 0.3rem;
+      border-radius: 5px;
+      opacity: 0.45;
+      transition: opacity 0.15s, transform 0.1s, background 0.15s;
+      line-height: 1;
     }
-    .new-key-slot input:focus { border-color: var(--accent); }
-    .new-key-slot .remove-slot-btn {
+    .reaction-btn:hover { opacity: 1; background: var(--surface2); transform: scale(1.2); }
+    .reaction-btn.active { opacity: 1; }
+    .share-card-btn {
       background: none;
       border: none;
       color: var(--muted);
+      font-size: 0.8rem;
       cursor: pointer;
-      font-size: 1.2rem;
-      padding: 0 0.2rem;
-      transition: color 0.15s;
+      padding: 0.2rem 0.4rem;
+      border-radius: 5px;
+      transition: color 0.15s, background 0.15s;
+      line-height: 1;
     }
-    .new-key-slot .remove-slot-btn:hover { color: var(--danger); }
-
-    /* Interest chips */
-    .chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.6rem;
-    }
-    .chip {
-      background: var(--surface);
-      border: 1.5px solid var(--border);
-      border-radius: 999px;
-      color: var(--muted);
-      cursor: pointer;
-      font-size: 0.88rem;
-      padding: 0.42rem 1rem;
-      transition: all 0.15s;
-      user-select: none;
-    }
-    .chip:hover { border-color: var(--accent2); color: var(--text); }
-    .chip.selected {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #fff;
-      font-weight: 600;
-    }
-
-    .settings-actions {
-      display: flex;
-      gap: 0.75rem;
-      align-items: center;
-      margin-top: 1.5rem;
-    }
-    .save-status { font-size: 0.88rem; color: var(--success); opacity: 0; transition: opacity 0.3s; }
-    .save-status.show { opacity: 1; }
+    .share-card-btn:hover { color: var(--text); background: var(--surface2); }
 
     /* ── Star button ── */
     .star-btn {
@@ -382,366 +304,332 @@
       backdrop-filter: blur(4px);
       border: none;
       border-radius: 50%;
-      width: 34px;
-      height: 34px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      width: 34px; height: 34px;
+      display: flex; align-items: center; justify-content: center;
       cursor: pointer;
-      font-size: 1.1rem;
-      line-height: 1;
+      font-size: 1.1rem; line-height: 1;
       transition: transform 0.15s, background 0.15s;
       z-index: 2;
     }
-    .star-btn:hover { transform: scale(1.2); background: rgba(15,17,23,0.92); }
+    body.light .star-btn { background: rgba(255,255,255,0.82); }
+    .star-btn:hover { transform: scale(1.2); }
     .star-btn.saved { color: #fbbf24; }
     .star-btn:not(.saved) { color: #8892a4; }
-    .card { position: relative; }
 
-    /* AOD star */
-    .aod-star-btn {
-      background: none;
-      border: 1.5px solid var(--border);
-      border-radius: 8px;
+    /* ── Folder badge ── */
+    .folder-badge {
+      font-size: 0.7rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
       color: var(--muted);
-      cursor: pointer;
-      font-size: 0.88rem;
-      padding: 0.5rem 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      transition: all 0.15s;
+      background: var(--surface2);
     }
+    .folder-badge[data-folder="read-later"] { color: #60a5fa; border-color: #60a5fa44; background: #60a5fa11; }
+    .folder-badge[data-folder="favorites"] { color: #f59e0b; border-color: #f59e0b44; background: #f59e0b11; }
+    .folder-badge[data-folder="archive"] { color: var(--muted); }
+
+    /* ── Status messages ── */
+    #feed-status, #aod-status, #nasa-status, #saved-status, #trending-status {
+      text-align: center; padding: 4rem 2rem; color: var(--muted); font-size: 1rem;
+    }
+    .status-hidden { display: none !important; }
+    .big { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    .hint { font-size: 0.88rem; margin-top: 0.5rem; }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Settings ── */
+    .settings-section { margin-bottom: 2.5rem; }
+    .settings-section h2 {
+      font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;
+      color: var(--accent2); border-bottom: 1px solid var(--border); padding-bottom: 0.6rem;
+    }
+    .api-key-field { display: flex; gap: 0.75rem; max-width: 520px; }
+    .api-key-field input {
+      flex: 1; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-size: 0.95rem; padding: 0.65rem 1rem;
+      outline: none; transition: border-color 0.2s;
+    }
+    .api-key-field input:focus { border-color: var(--accent); }
+    .settings-hint { font-size: 0.84rem; color: var(--muted); margin-top: 0.5rem; line-height: 1.6; }
+    .settings-hint a { color: var(--accent2); }
+    .key-item {
+      display: flex; align-items: center; gap: 0.6rem;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.55rem 0.9rem; margin-bottom: 0.5rem; font-size: 0.9rem;
+    }
+    .key-item .key-label { flex: 1; font-family: monospace; color: var(--muted); letter-spacing: 0.04em; }
+    .key-item .key-idx { font-size: 0.75rem; color: var(--accent2); font-weight: 600; min-width: 3rem; }
+    .key-delete-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.1rem; padding: 0 0.2rem; line-height: 1; transition: color 0.15s; }
+    .key-delete-btn:hover { color: var(--danger); }
+    .keys-dropdown { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 0.5rem; }
+    .keys-dropdown summary { background: var(--surface2); padding: 0.7rem 1rem; cursor: pointer; font-size: 0.9rem; color: var(--text); list-style: none; display: flex; align-items: center; justify-content: space-between; user-select: none; }
+    .keys-dropdown summary::-webkit-details-marker { display: none; }
+    .keys-dropdown summary::after { content: '▾'; color: var(--muted); transition: transform 0.2s; }
+    .keys-dropdown[open] summary::after { transform: rotate(-180deg); }
+    .keys-dropdown .keys-inner { padding: 0.6rem 0.6rem 0.2rem; }
+    .new-key-slot { display: flex; gap: 0.6rem; margin-bottom: 0.5rem; align-items: center; }
+    .new-key-slot input {
+      flex: 1; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-size: 0.9rem; padding: 0.6rem 0.9rem;
+      outline: none; transition: border-color 0.2s; font-family: monospace;
+    }
+    .new-key-slot input:focus { border-color: var(--accent); }
+    .new-key-slot .remove-slot-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.2rem; padding: 0 0.2rem; transition: color 0.15s; }
+    .new-key-slot .remove-slot-btn:hover { color: var(--danger); }
+    .chips { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+    .chip {
+      background: var(--surface); border: 1.5px solid var(--border); border-radius: 999px;
+      color: var(--muted); cursor: pointer; font-size: 0.88rem; padding: 0.42rem 1rem;
+      transition: all 0.15s; user-select: none;
+    }
+    .chip:hover { border-color: var(--accent2); color: var(--text); }
+    .chip.selected { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+    .settings-actions { display: flex; gap: 0.75rem; align-items: center; margin-top: 1.5rem; }
+    .save-status { font-size: 0.88rem; color: var(--success); opacity: 0; transition: opacity 0.3s; }
+    .save-status.show { opacity: 1; }
+
+    /* ── AOD ── */
+    #aod-status { text-align: center; padding: 4rem 2rem; color: var(--muted); }
+    .aod-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.75rem; flex-wrap: wrap; gap: 1rem; }
+    .aod-header h1 { font-size: 1.5rem; }
+    .aod-resets { font-size: 0.82rem; color: var(--muted); margin-top: 0.2rem; }
+    .aod-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; max-width: 780px; margin: 0 auto; box-shadow: 0 8px 40px rgba(108,99,255,0.10); }
+    .aod-card img { width: 100%; height: 340px; object-fit: cover; background: var(--surface2); display: block; }
+    .aod-body { padding: 2rem 2.2rem 2.2rem; }
+    .aod-badge { display: inline-flex; align-items: center; gap: 0.4rem; background: linear-gradient(90deg, #f59e0b, #fbbf24); color: #1a1a1a; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.28rem 0.8rem; border-radius: 999px; margin-bottom: 1rem; }
+    .aod-source { font-size: 0.8rem; color: var(--accent2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.6rem; }
+    .aod-title { font-size: 1.65rem; font-weight: 700; line-height: 1.35; color: var(--text); margin-bottom: 1rem; }
+    .aod-desc { font-size: 1rem; color: var(--muted); line-height: 1.7; margin-bottom: 1.4rem; }
+    .aod-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+    .aod-date { font-size: 0.82rem; color: var(--muted); }
+    .aod-link { display: inline-block; background: var(--accent); color: #fff; font-weight: 600; font-size: 0.9rem; padding: 0.6rem 1.4rem; border-radius: 8px; text-decoration: none; transition: opacity 0.2s; cursor: pointer; border: none; }
+    .aod-link:hover { opacity: 0.85; }
+    .aod-star-btn { background: none; border: 1.5px solid var(--border); border-radius: 8px; color: var(--muted); cursor: pointer; font-size: 0.88rem; padding: 0.5rem 1rem; display: flex; align-items: center; gap: 0.4rem; transition: all 0.15s; }
     .aod-star-btn:hover { border-color: #fbbf24; color: #fbbf24; }
     .aod-star-btn.saved { border-color: #fbbf24; color: #fbbf24; background: rgba(251,191,36,0.08); }
 
-    /* ── Article of the Day ── */
-    #aod-status {
-      text-align: center;
-      padding: 4rem 2rem;
-      color: var(--muted);
-      font-size: 1rem;
-    }
-    #aod-status .big { font-size: 2.5rem; margin-bottom: 0.75rem; }
-    #aod-status .hint { font-size: 0.88rem; margin-top: 0.5rem; }
-
-    .aod-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 1.75rem;
-      flex-wrap: wrap;
-      gap: 1rem;
-    }
-    .aod-header h1 { font-size: 1.5rem; }
-    .aod-resets { font-size: 0.82rem; color: var(--muted); margin-top: 0.2rem; }
-
-    .aod-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      overflow: hidden;
-      max-width: 780px;
-      margin: 0 auto;
-      box-shadow: 0 8px 40px rgba(108,99,255,0.10);
-    }
-    .aod-card img {
-      width: 100%;
-      height: 340px;
-      object-fit: cover;
-      background: var(--surface2);
-      display: block;
-    }
-    .aod-body { padding: 2rem 2.2rem 2.2rem; }
-    .aod-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      background: linear-gradient(90deg, #f59e0b, #fbbf24);
-      color: #1a1a1a;
-      font-size: 0.72rem;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      padding: 0.28rem 0.8rem;
-      border-radius: 999px;
-      margin-bottom: 1rem;
-    }
-    .aod-source {
-      font-size: 0.8rem;
-      color: var(--accent2);
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 0.6rem;
-    }
-    .aod-title {
-      font-size: 1.65rem;
-      font-weight: 700;
-      line-height: 1.35;
-      color: var(--text);
-      margin-bottom: 1rem;
-    }
-    .aod-desc {
-      font-size: 1rem;
-      color: var(--muted);
-      line-height: 1.7;
-      margin-bottom: 1.4rem;
-    }
-    .aod-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 1rem;
-    }
-    .aod-date { font-size: 0.82rem; color: var(--muted); }
-    .aod-link {
-      display: inline-block;
-      background: var(--accent);
-      color: #fff;
-      font-weight: 600;
-      font-size: 0.9rem;
-      padding: 0.6rem 1.4rem;
-      border-radius: 8px;
-      text-decoration: none;
-      transition: opacity 0.2s;
-    }
-    .aod-link:hover { opacity: 0.85; }
-
-    /* ── Article Reader ── */
+    /* ── Reader ── */
     #reader-overlay {
       position: fixed; inset: 0; z-index: 500;
-      background: #0d0f18;
-      display: none;
-      flex-direction: column;
-      overflow: hidden;
+      background: var(--bg);
+      display: none; flex-direction: column; overflow: hidden;
     }
     #reader-overlay.open { display: flex; }
 
-    .reader-topbar {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 0.9rem 1.5rem;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    .reader-back {
-      background: none;
-      border: none;
-      color: var(--muted);
-      font-size: 1.4rem;
-      cursor: pointer;
-      padding: 0;
-      line-height: 1;
-      transition: color 0.15s;
-    }
-    .reader-back:hover { color: var(--text); }
-    .reader-topbar-title {
-      font-size: 0.9rem;
-      color: var(--muted);
-      flex: 1;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    #reader-progress {
+      position: absolute;
+      top: 0; left: 0;
+      height: 3px;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.1s;
+      z-index: 10;
+      pointer-events: none;
     }
 
-    .reader-scroll {
-      flex: 1;
-      overflow-y: auto;
-      padding: 2.5rem 1.5rem 4rem;
+    .reader-topbar {
+      display: flex; align-items: center; gap: 0.6rem;
+      padding: 0.75rem 1rem;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      flex-shrink: 0; flex-wrap: wrap;
     }
-    .reader-body {
-      max-width: 700px;
-      margin: 0 auto;
+    .reader-back { background: none; border: none; color: var(--muted); font-size: 1.4rem; cursor: pointer; padding: 0; line-height: 1; transition: color 0.15s; }
+    .reader-back:hover { color: var(--text); }
+    .reader-topbar-title { font-size: 0.88rem; color: var(--muted); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .reader-topbar-divider { width: 1px; height: 1.2rem; background: var(--border); }
+
+    .reader-reactions { display: flex; gap: 0.15rem; align-items: center; }
+    .reader-reaction-btn {
+      background: none; border: 1px solid transparent; border-radius: 7px;
+      font-size: 1rem; cursor: pointer; padding: 0.28rem 0.45rem;
+      transition: all 0.15s; line-height: 1; color: var(--muted);
     }
-    .reader-meta {
-      font-size: 0.8rem;
-      color: var(--accent2);
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 0.6rem;
-    }
-    .reader-title {
-      font-size: 1.9rem;
-      font-weight: 700;
-      line-height: 1.3;
-      margin-bottom: 1.5rem;
-      color: var(--text);
-    }
+    .reader-reaction-btn:hover { background: var(--surface2); border-color: var(--border); }
+    .reader-reaction-btn.active { background: var(--surface2); border-color: var(--accent); color: var(--text); }
+
+    .font-btn { font-size: 0.82rem; padding: 0.38rem 0.65rem; font-weight: 700; }
+    .small-action-btn { font-size: 0.8rem; padding: 0.38rem 0.75rem; }
+
+    .reader-scroll { flex: 1; overflow-y: auto; padding: 2.5rem 1.5rem 4rem; }
+    .reader-body { max-width: 700px; margin: 0 auto; }
+    .reader-meta { font-size: 0.8rem; color: var(--accent2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.6rem; }
+    .reader-read-time { font-size: 0.82rem; color: var(--muted); margin-bottom: 1rem; }
+    .reader-title { font-size: 1.9rem; font-weight: 700; line-height: 1.3; margin-bottom: 1.5rem; color: var(--text); }
     .reader-content {
-      font-size: 1.05rem;
-      line-height: 1.85;
-      color: #c8d0dc;
+      font-size: var(--reader-font-size);
+      line-height: 1.85; color: #c8d0dc;
     }
+    body.light .reader-content { color: var(--text); }
     .reader-content p { margin-bottom: 1.2rem; }
-    .reader-content h1, .reader-content h2, .reader-content h3 {
-      color: var(--text);
-      margin: 1.8rem 0 0.8rem;
-      line-height: 1.35;
-    }
+    .reader-content h1, .reader-content h2, .reader-content h3 { color: var(--text); margin: 1.8rem 0 0.8rem; line-height: 1.35; }
     .reader-content h1 { font-size: 1.4rem; }
     .reader-content h2 { font-size: 1.2rem; }
     .reader-content h3 { font-size: 1.05rem; }
-    .reader-content img {
-      max-width: 100%;
-      border-radius: 8px;
-      margin: 1rem 0;
-    }
+    .reader-content img { max-width: 100%; border-radius: 8px; margin: 1rem 0; }
     .reader-content a { color: var(--accent2); }
     .reader-content ul, .reader-content ol { padding-left: 1.5rem; margin-bottom: 1.2rem; }
     .reader-content li { margin-bottom: 0.4rem; }
-    .reader-content blockquote {
-      border-left: 3px solid var(--accent);
-      padding-left: 1rem;
-      color: var(--muted);
-      margin: 1.2rem 0;
-    }
+    .reader-content blockquote { border-left: 3px solid var(--accent); padding-left: 1rem; color: var(--muted); margin: 1.2rem 0; }
     .reader-content figure { margin: 1.2rem 0; }
     .reader-content figcaption { font-size: 0.82rem; color: var(--muted); margin-top: 0.3rem; }
 
-    #reader-loading {
-      text-align: center;
-      padding: 5rem 2rem;
-      color: var(--muted);
-    }
-    #reader-error {
-      background: rgba(248,113,113,0.08);
-      border: 1px solid var(--danger);
-      border-radius: 10px;
-      padding: 1.2rem 1.4rem;
-      color: var(--danger);
-      font-size: 0.9rem;
+    #reader-loading { text-align: center; padding: 5rem 2rem; color: var(--muted); }
+    #reader-error { background: rgba(248,113,113,0.08); border: 1px solid var(--danger); border-radius: 10px; padding: 1.2rem 1.4rem; color: var(--danger); font-size: 0.9rem; margin-bottom: 1.5rem; display: none; }
+
+    .continue-banner {
+      background: linear-gradient(90deg, var(--accent)22, var(--surface2));
+      border: 1px solid var(--accent)44;
+      border-radius: 8px;
+      padding: 0.7rem 1rem;
       margin-bottom: 1.5rem;
-      display: none;
-    }
-
-    /* ── NASA Pictures tab ── */
-    #nasa-status {
-      text-align: center;
-      padding: 4rem 2rem;
-      color: var(--muted);
-    }
-    #nasa-status .big { font-size: 2.5rem; margin-bottom: 0.75rem; }
-    #nasa-status .hint { font-size: 0.88rem; margin-top: 0.5rem; }
-
-    .nasa-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 1.75rem;
-      flex-wrap: wrap;
-      gap: 1rem;
+      font-size: 0.88rem;
+      color: var(--muted);
     }
+    .continue-banner button { background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--text); cursor: pointer; font-size: 0.82rem; padding: 0.28rem 0.7rem; }
+    .continue-banner button:hover { border-color: var(--accent); }
+
+    /* Related articles */
+    .reader-related { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border); }
+    .reader-related h3 { font-size: 1.1rem; font-weight: 700; color: var(--accent2); margin-bottom: 1.2rem; }
+    .related-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .related-item {
+      display: flex; gap: 0.85rem; cursor: pointer;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 0.8rem 1rem; transition: border-color 0.2s, background 0.2s;
+    }
+    .related-item:hover { border-color: var(--accent); background: var(--card-hover); }
+    .related-img { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; flex-shrink: 0; background: var(--surface2); }
+    .related-info .related-source { font-size: 0.72rem; color: var(--accent2); font-weight: 600; text-transform: uppercase; }
+    .related-info .related-title { font-size: 0.9rem; font-weight: 600; color: var(--text); line-height: 1.4; }
+
+    /* Notes panel */
+    .reader-notes-panel { margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--border); }
+    .reader-notes-panel h3 { font-size: 1.1rem; font-weight: 700; color: var(--accent2); margin-bottom: 0.85rem; }
+    .notes-textarea {
+      width: 100%; min-height: 100px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); font-size: 0.95rem; padding: 0.75rem 1rem;
+      outline: none; resize: vertical; transition: border-color 0.2s; font-family: inherit;
+      line-height: 1.6;
+    }
+    .notes-textarea:focus { border-color: var(--accent); }
+    .notes-actions { display: flex; gap: 0.6rem; margin-top: 0.6rem; align-items: center; }
+    .note-saved-msg { font-size: 0.82rem; color: var(--success); opacity: 0; transition: opacity 0.3s; }
+    .note-saved-msg.show { opacity: 1; }
+
+    /* Folder select in reader */
+    .reader-folder-row { margin-top: 1.5rem; display: flex; align-items: center; gap: 0.75rem; }
+    .reader-folder-row label { font-size: 0.85rem; color: var(--muted); }
+    .folder-select {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 7px;
+      color: var(--text); font-size: 0.85rem; padding: 0.35rem 0.75rem; cursor: pointer;
+      outline: none; transition: border-color 0.2s;
+    }
+    .folder-select:focus { border-color: var(--accent); }
+
+    /* ── NASA ── */
+    .nasa-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.75rem; flex-wrap: wrap; gap: 1rem; }
     .nasa-header h1 { font-size: 1.5rem; }
     .nasa-header .meta { font-size: 0.88rem; color: var(--muted); margin-top: 0.2rem; }
-
-    #nasa-grid {
-      columns: 3;
-      column-gap: 1rem;
-    }
+    #nasa-grid { columns: 3; column-gap: 1rem; }
     @media (max-width: 900px) { #nasa-grid { columns: 2; } }
     @media (max-width: 560px) { #nasa-grid { columns: 1; } }
-
-    .nasa-card {
-      break-inside: avoid;
-      margin-bottom: 1rem;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      overflow: hidden;
-      cursor: pointer;
-      transition: border-color 0.2s, transform 0.15s;
-    }
+    .nasa-card { break-inside: avoid; margin-bottom: 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; cursor: pointer; transition: border-color 0.2s, transform 0.15s; }
     .nasa-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-    .nasa-card img {
-      width: 100%;
-      display: block;
-      background: var(--surface2);
-    }
+    .nasa-card img { width: 100%; display: block; background: var(--surface2); }
     .nasa-card-body { padding: 0.8rem 1rem 1rem; }
     .nasa-card-date { font-size: 0.72rem; color: var(--accent2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem; }
     .nasa-card-title { font-size: 0.92rem; font-weight: 600; line-height: 1.4; color: var(--text); }
     .nasa-card-copy { font-size: 0.75rem; color: var(--muted); margin-top: 0.2rem; }
 
     /* Lightbox */
-    #lightbox {
-      position: fixed; inset: 0; z-index: 1000;
-      background: rgba(0,0,0,0.92);
-      display: none;
-      align-items: flex-start;
-      justify-content: center;
-      overflow-y: auto;
-      padding: 1.5rem;
-      cursor: zoom-out;
-    }
+    #lightbox { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.92); display: none; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 1.5rem; cursor: zoom-out; }
     #lightbox.open { display: flex; }
-    .lb-inner {
-      max-width: 1100px;
-      width: 100%;
-      cursor: default;
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      margin: auto;
-      padding-bottom: 1rem;
-    }
-    .lb-inner img {
-      width: 100%;
-      max-height: 80vh;
-      object-fit: contain;
-      border-radius: 10px;
-    }
-    .lb-inner iframe {
-      width: 100%;
-      aspect-ratio: 16/9;
-      border: none;
-      border-radius: 10px;
-    }
+    .lb-inner { max-width: 1100px; width: 100%; cursor: default; display: flex; flex-direction: column; gap: 1rem; margin: auto; padding-bottom: 1rem; }
+    .lb-inner img { width: 100%; max-height: 80vh; object-fit: contain; border-radius: 10px; }
+    .lb-inner iframe { width: 100%; aspect-ratio: 16/9; border: none; border-radius: 10px; }
     .lb-info { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
     .lb-text h2 { font-size: 1.2rem; margin-bottom: 0.4rem; }
-    .lb-text p { font-size: 0.88rem; color: var(--muted); line-height: 1.6; max-width: 700px;
-      display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+    .lb-text p { font-size: 0.88rem; color: var(--muted); line-height: 1.6; max-width: 700px; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
     .lb-text .lb-meta { font-size: 0.78rem; color: var(--accent2); margin-bottom: 0.4rem; }
-    .lb-actions { display: flex; gap: 0.6rem; flex-shrink: 0; }
-    .lb-close {
-      position: fixed; top: 1rem; right: 1.2rem;
-      background: none; border: none; color: #fff;
-      font-size: 2rem; cursor: pointer; line-height: 1; z-index: 1001;
-    }
+    .lb-actions { display: flex; gap: 0.6rem; flex-shrink: 0; flex-wrap: wrap; }
+    .lb-close { position: fixed; top: 1rem; right: 1.2rem; background: none; border: none; color: #fff; font-size: 2rem; cursor: pointer; line-height: 1; z-index: 1001; }
 
-    /* ── Saved Articles tab ── */
-    .saved-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 1.5rem;
-      flex-wrap: wrap;
-      gap: 1rem;
-    }
+    /* ── Saved Articles ── */
+    .saved-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem; }
     .saved-header h1 { font-size: 1.5rem; }
     .saved-count { color: var(--muted); font-size: 0.88rem; margin-top: 0.2rem; }
-    #saved-status {
-      text-align: center;
-      padding: 4rem 2rem;
-      color: var(--muted);
+    .folder-tabs { display: flex; gap: 0.4rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .folder-tab {
+      background: none; border: 1px solid var(--border); border-radius: 7px;
+      color: var(--muted); cursor: pointer; font-size: 0.88rem; padding: 0.42rem 1rem;
+      transition: all 0.15s;
     }
-    #saved-status .big { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    .folder-tab:hover { color: var(--text); border-color: var(--accent2); }
+    .folder-tab.active { background: var(--surface2); color: var(--text); border-color: var(--accent); }
+
+    /* ── Trending ── */
+    .trending-header { margin-bottom: 2rem; }
+    .trending-header h1 { font-size: 1.5rem; }
+    .trending-header .meta { color: var(--muted); font-size: 0.88rem; margin-top: 0.3rem; }
+    .trending-section { margin-bottom: 2.5rem; }
+    .trending-section h2 { font-size: 1.1rem; font-weight: 700; color: var(--accent2); margin-bottom: 1.2rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+    .trending-rank {
+      position: absolute; top: 0.6rem; left: 0.6rem;
+      background: var(--accent); color: #fff;
+      font-size: 0.7rem; font-weight: 800;
+      padding: 0.2rem 0.55rem; border-radius: 999px;
+      z-index: 2;
+    }
+
+    /* ── Toast notification ── */
+    #toast {
+      position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(100px);
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 0.75rem 1.25rem; font-size: 0.9rem; color: var(--text);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 9999;
+      transition: transform 0.3s ease;
+      pointer-events: none;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── Print styles ── */
+    @media print {
+      header, nav, #tab-feed, #tab-aod, #tab-nasa, #tab-trending, #tab-settings,
+      .reader-topbar, .star-btn, .card-actions, .folder-tabs, .saved-header .btn,
+      #lightbox, #reader-overlay, #toast { display: none !important; }
+      body { background: white; color: black; }
+      .card { border: 1px solid #ccc; break-inside: avoid; margin-bottom: 1rem; page-break-inside: avoid; }
+      #tab-saved { display: block !important; }
+      #saved-grid { display: grid; grid-template-columns: repeat(2, 1fr); }
+    }
 
     @media (max-width: 600px) {
-      header { gap: 1rem; padding: 0 1rem; }
+      header { gap: 0.5rem; padding: 0 1rem; }
       main { padding: 1.25rem 1rem; }
-      #articles-grid { grid-template-columns: 1fr; }
+      #articles-grid, #saved-grid, #trending-grid, #weekly-grid { grid-template-columns: 1fr; }
       .aod-card img { height: 200px; }
       .aod-body { padding: 1.2rem 1.2rem 1.5rem; }
       .aod-title { font-size: 1.25rem; }
+      .reader-topbar { gap: 0.4rem; }
     }
   </style>
 </head>
 <body>
+
+<div id="toast"></div>
 
 <header>
   <div class="logo">Shiny <span>Articles</span></div>
@@ -749,25 +637,36 @@
     <button id="tab-feed-btn" class="active" onclick="showTab('feed')">Feed</button>
     <button id="tab-aod-btn" class="special" onclick="showTab('aod')">★ Article of the Day</button>
     <button id="tab-saved-btn" onclick="showTab('saved')">Saved Articles</button>
+    <button id="tab-trending-btn" onclick="showTab('trending')">🔥 Trending</button>
     <button id="tab-nasa-btn" onclick="showTab('nasa')">NASA Images 📷</button>
     <button id="tab-settings-btn" onclick="showTab('settings')">Settings</button>
   </nav>
+  <div class="header-actions">
+    <button class="icon-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Toggle dark/light mode">🌙</button>
+  </div>
 </header>
 
 <main>
-  <!-- Feed tab -->
+
+  <!-- ── Feed tab ── -->
   <div id="tab-feed" class="tab active">
     <div id="setup-banner">
       <h2>Set up your NewsAPI key</h2>
-      <p>
-        To fetch articles, you need a free API key from
+      <p>To fetch articles, you need a free API key from
         <a href="https://newsapi.org/register" target="_blank">newsapi.org/register</a>.
-        It takes about 30 seconds — just sign up and copy your key.
+        It takes about 30 seconds — sign up and copy your key.
       </p>
       <div class="key-row">
         <input id="banner-key" type="text" placeholder="Paste your API key here…" />
         <button class="btn" onclick="saveBannerKey()">Save Key</button>
       </div>
+    </div>
+
+    <div class="feed-controls">
+      <div class="search-input-wrap">
+        <input id="search-input" type="search" placeholder="Search articles…" oninput="filterFeed()" />
+      </div>
+      <div id="feed-filter-chips" class="feed-chips"></div>
     </div>
 
     <div class="feed-header">
@@ -782,7 +681,7 @@
     <div id="articles-grid"></div>
   </div>
 
-  <!-- Article of the Day tab -->
+  <!-- ── Article of the Day tab ── -->
   <div id="tab-aod" class="tab">
     <div class="aod-header">
       <div>
@@ -794,7 +693,47 @@
     <div id="aod-container"></div>
   </div>
 
-  <!-- NASA Images tab -->
+  <!-- ── Saved Articles tab ── -->
+  <div id="tab-saved" class="tab">
+    <div class="saved-header">
+      <div>
+        <h1>Saved Articles</h1>
+        <div class="saved-count" id="saved-count"></div>
+      </div>
+      <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
+        <button class="btn secondary" onclick="exportToPdf()">📄 Export PDF</button>
+      </div>
+    </div>
+    <div class="folder-tabs">
+      <button class="folder-tab active" data-folder="all" onclick="switchFolder('all')">All Saved</button>
+      <button class="folder-tab" data-folder="read-later" onclick="switchFolder('read-later')">📌 Read Later</button>
+      <button class="folder-tab" data-folder="favorites" onclick="switchFolder('favorites')">⭐ Favorites</button>
+      <button class="folder-tab" data-folder="archive" onclick="switchFolder('archive')">📦 Archive</button>
+    </div>
+    <div id="saved-status"></div>
+    <div id="saved-grid"></div>
+  </div>
+
+  <!-- ── Trending tab ── -->
+  <div id="tab-trending" class="tab">
+    <div class="trending-header">
+      <h1>🔥 Trending</h1>
+      <div class="meta">Articles you've read most — updated as you browse</div>
+    </div>
+    <div id="trending-status"></div>
+    <div id="trending-weekly-section" class="trending-section">
+      <h2>📅 Weekly Digest — top stories in the last 7 days</h2>
+      <div id="weekly-grid"></div>
+      <div id="weekly-empty" style="display:none;color:var(--muted);font-size:0.9rem;">Read some articles first — they'll show up here.</div>
+    </div>
+    <div class="trending-section">
+      <h2>🔥 Most Read — all time</h2>
+      <div id="trending-grid"></div>
+      <div id="trending-empty" style="display:none;color:var(--muted);font-size:0.9rem;">Read some articles first — they'll show up here.</div>
+    </div>
+  </div>
+
+  <!-- ── NASA Images tab ── -->
   <div id="tab-nasa" class="tab">
     <div class="nasa-header">
       <div>
@@ -807,25 +746,97 @@
     <div id="nasa-grid"></div>
   </div>
 
-  <!-- Article Reader -->
-  <div id="reader-overlay">
-    <div class="reader-topbar">
-      <button class="reader-back" onclick="closeReader()" title="Back">←</button>
-      <div class="reader-topbar-title" id="reader-topbar-title"></div>
-      <button class="btn secondary" style="font-size:0.82rem;padding:0.4rem 0.9rem;" onclick="openReaderExternal()">Open in browser</button>
+  <!-- ── Settings tab ── -->
+  <div id="tab-settings" class="tab">
+    <div class="settings-section">
+      <h2>API Keys</h2>
+      <p class="settings-hint" style="margin-bottom:1rem;">
+        Add one or more free keys from <a href="https://newsapi.org/register" target="_blank">newsapi.org/register</a>.
+        Each free key allows 100 requests/day — extra keys act as backups.
+      </p>
+      <div id="keys-list"></div>
+      <div id="new-key-slots"></div>
+      <button class="btn secondary" id="add-key-btn" onclick="addKeySlot()" style="margin-top:0.75rem;">+ Add API Key</button>
+      <div id="keys-save-row" style="display:none;margin-top:0.75rem;display:flex;gap:0.75rem;align-items:center;">
+        <button class="btn" onclick="saveNewKeys()">Save New Keys</button>
+        <span class="save-status" id="keys-save-status">Saved!</span>
+      </div>
     </div>
-    <div class="reader-scroll">
-      <div class="reader-body">
-        <div id="reader-loading"><div class="spinner"></div>Loading article…</div>
-        <div id="reader-error"></div>
-        <div class="reader-meta" id="reader-meta"></div>
-        <div class="reader-title" id="reader-title" style="display:none"></div>
-        <div class="reader-content" id="reader-content"></div>
+
+    <div class="settings-section">
+      <h2>NASA API Key</h2>
+      <div id="nasa-key-display"></div>
+      <div class="api-key-field" id="nasa-key-field">
+        <input type="text" id="nasa-key-input" placeholder="Paste NASA API key here…" autocomplete="off" spellcheck="false" style="font-family:monospace;" />
+        <button class="btn" onclick="saveNasaKey()">Save</button>
+      </div>
+      <p class="settings-hint">Get a free key at <a href="https://api.nasa.gov" target="_blank">api.nasa.gov</a>.</p>
+    </div>
+
+    <div class="settings-section">
+      <h2>Your Interests</h2>
+      <div class="chips" id="interest-chips"></div>
+      <div class="settings-actions">
+        <button class="btn" onclick="saveInterests()">Save Interests</button>
+        <button class="btn secondary" onclick="selectAll()">Select All</button>
+        <button class="btn secondary" onclick="clearAll()">Clear All</button>
+        <span class="save-status" id="save-status">Saved!</span>
       </div>
     </div>
   </div>
 
-  <!-- Lightbox -->
+  <!-- ── Reader overlay ── -->
+  <div id="reader-overlay">
+    <div id="reader-progress"></div>
+    <div class="reader-topbar">
+      <button class="reader-back" onclick="closeReader()" title="Back">←</button>
+      <div class="reader-topbar-title" id="reader-topbar-title"></div>
+      <div class="reader-topbar-divider"></div>
+      <div class="reader-reactions" id="reader-reactions-bar"></div>
+      <div class="reader-topbar-divider"></div>
+      <button class="btn secondary font-btn" onclick="changeFontSize(-1)" title="Decrease font size">A−</button>
+      <button class="btn secondary font-btn" onclick="changeFontSize(1)" title="Increase font size">A+</button>
+      <button class="btn secondary small-action-btn" onclick="shareArticle()" title="Share">⬆ Share</button>
+      <button class="btn secondary small-action-btn" onclick="openReaderExternal()">Open in browser</button>
+    </div>
+    <div class="reader-scroll" id="reader-scroll" onscroll="updateReadProgress()">
+      <div class="reader-body">
+        <div id="continue-banner" class="continue-banner" style="display:none;">
+          <span>Continue from where you left off?</span>
+          <div style="display:flex;gap:0.5rem;">
+            <button onclick="restoreScroll()">Continue ↓</button>
+            <button onclick="dismissContinue()">Start over</button>
+          </div>
+        </div>
+        <div id="reader-loading"><div class="spinner"></div>Loading article…</div>
+        <div id="reader-error"></div>
+        <div class="reader-meta" id="reader-meta"></div>
+        <div class="reader-read-time" id="reader-read-time" style="display:none;"></div>
+        <div class="reader-title" id="reader-title" style="display:none;"></div>
+        <div class="reader-content" id="reader-content"></div>
+        <div id="reader-folder-row" class="reader-folder-row" style="display:none;">
+          <label>Saved to folder:</label>
+          <select class="folder-select" id="reader-folder-select" onchange="changeArticleFolder(this.value)">
+            <option value="">Unsorted</option>
+            <option value="read-later">📌 Read Later</option>
+            <option value="favorites">⭐ Favorites</option>
+            <option value="archive">📦 Archive</option>
+          </select>
+        </div>
+        <div id="reader-related" class="reader-related" style="display:none;"></div>
+        <div class="reader-notes-panel">
+          <h3>📝 Notes</h3>
+          <textarea class="notes-textarea" id="reader-notes" placeholder="Add a private note about this article…"></textarea>
+          <div class="notes-actions">
+            <button class="btn" onclick="saveNote()">Save Note</button>
+            <span class="note-saved-msg" id="note-saved-msg">Saved!</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Lightbox ── -->
   <div id="lightbox" onclick="closeLightbox()">
     <button class="lb-close" onclick="closeLightbox()">✕</button>
     <div class="lb-inner" onclick="event.stopPropagation()">
@@ -845,679 +856,1041 @@
     </div>
   </div>
 
-  <!-- Saved Articles tab -->
-  <div id="tab-saved" class="tab">
-    <div class="saved-header">
-      <div>
-        <h1>Saved Articles</h1>
-        <div class="saved-count" id="saved-count"></div>
-      </div>
-    </div>
-    <div id="saved-status"></div>
-    <div id="saved-grid" class="articles-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.25rem;"></div>
-  </div>
-
-  <!-- Settings tab -->
-  <div id="tab-settings" class="tab">
-    <div class="settings-section">
-      <h2>API Keys</h2>
-      <p class="settings-hint" style="margin-bottom:1rem;">
-        Add one or more free keys from <a href="https://newsapi.org/register" target="_blank">newsapi.org/register</a>.
-        Each free key allows 100 requests/day — extra keys act as backups when one runs out.
-      </p>
-      <div id="keys-list"></div>
-      <div id="new-key-slots"></div>
-      <button class="btn secondary" id="add-key-btn" onclick="addKeySlot()" style="margin-top:0.75rem;">+ Add API Key</button>
-      <div id="keys-save-row" style="display:none;margin-top:0.75rem;display:flex;gap:0.75rem;align-items:center;">
-        <button class="btn" onclick="saveNewKeys()">Save New Keys</button>
-        <span class="save-status" id="keys-save-status">Saved!</span>
-      </div>
-    </div>
-
-    <div class="settings-section">
-      <h2>NASA API Key</h2>
-      <div id="nasa-key-display"></div>
-      <div class="api-key-field" id="nasa-key-field">
-        <input type="text" id="nasa-key-input" placeholder="Paste NASA API key here…" autocomplete="off" spellcheck="false" style="font-family:monospace;" />
-        <button class="btn" onclick="saveNasaKey()">Save</button>
-      </div>
-      <p class="settings-hint">
-        Get a free key at <a href="https://api.nasa.gov" target="_blank">api.nasa.gov</a> — click "Generate API Key".
-        Without a key, a limited demo key is used (30 req/hour).
-      </p>
-    </div>
-
-    <div class="settings-section">
-      <h2>Your Interests</h2>
-      <div class="chips" id="interest-chips"></div>
-      <div class="settings-actions">
-        <button class="btn" onclick="saveInterests()">Save Interests</button>
-        <button class="btn secondary" onclick="selectAll()">Select All</button>
-        <button class="btn secondary" onclick="clearAll()">Clear All</button>
-        <span class="save-status" id="save-status">Saved!</span>
-      </div>
-    </div>
-  </div>
 </main>
 
 <script>
-  const INTERESTS = {{ interests | tojson }};
-  let selected = new Set();
-  let savedUrls = new Set();
+const INTERESTS = {{ interests | tojson }};
+const FOLDER_LABELS = {'read-later': '📌 Read Later', favorites: '⭐ Favorites', archive: '📦 Archive'};
 
-  async function init() {
-    const [cfg, savedRes] = await Promise.all([
-      fetch('/api/config').then(r => r.json()),
-      fetch('/api/saved').then(r => r.json()),
-    ]);
-    selected = new Set(cfg.selected_interests || []);
-    savedUrls = new Set((savedRes.saved || []).map(a => a.url));
+// ── State ──────────────────────────────────────────────────────────────────
+let selected      = new Set();
+let savedUrls     = new Set();
+let articleMeta   = {};          // url -> meta object
+let allFeedArticles   = [];      // full loaded list
+let activeFilterChips = new Set(); // active category filter
+let currentFolder = 'all';
 
-    renderChips();
-    renderKeysList(cfg.api_keys || []);
-    renderNasaKeyDisplay(cfg);
+// Reader state
+let readerCurrentUrl     = '';
+let readerCurrentArticle = null;
+let savedScrollPos       = 0;
 
-    if (!cfg.has_api_key) {
-      document.getElementById('setup-banner').style.display = 'block';
-    }
+// ── Theme ──────────────────────────────────────────────────────────────────
+function initTheme() {
+  const t = localStorage.getItem('theme') || 'dark';
+  document.body.classList.toggle('light', t === 'light');
+  document.getElementById('theme-toggle-btn').textContent = t === 'light' ? '🌙' : '☀️';
+}
 
-    if (cfg.has_api_key) {
-      if (selected.size > 0) loadArticles();
-      else showFeedStatus('emoji', '✦', 'Pick some interests in Settings to get started.',
-        '<span class="hint">Click <b>Settings</b> above and choose topics you care about.</span>');
-    } else {
-      showFeedStatus('emoji', '🔑', 'No API key yet.',
-        '<span class="hint">Paste your NewsAPI key above to get started.</span>');
-    }
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light');
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+  document.getElementById('theme-toggle-btn').textContent = isLight ? '🌙' : '☀️';
+}
+
+// ── Font size ──────────────────────────────────────────────────────────────
+let fontSize = parseFloat(localStorage.getItem('reader-font-size') || '1.05');
+
+function applyFontSize() {
+  document.documentElement.style.setProperty('--reader-font-size', fontSize + 'rem');
+}
+
+function changeFontSize(dir) {
+  fontSize = Math.min(1.5, Math.max(0.8, Math.round((fontSize + dir * 0.1) * 100) / 100));
+  localStorage.setItem('reader-font-size', fontSize);
+  applyFontSize();
+}
+
+// ── Service worker ──────────────────────────────────────────────────────────
+function registerSW() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/static/sw.js').catch(() => {});
   }
+}
 
-  function showTab(name) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-    document.getElementById('tab-' + name).classList.add('active');
-    document.getElementById('tab-' + name + '-btn').classList.add('active');
-    if (name === 'aod') loadAod();
-    if (name === 'nasa') loadNasa();
-    if (name === 'saved') loadSaved();
+function precacheArticle(url) {
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({ type: 'CACHE_ARTICLE', url });
   }
+}
 
-  /* ── Saved articles ── */
+// ── Toast ──────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, duration = 2200) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), duration);
+}
 
-  async function toggleSave(article, btn) {
-    event.preventDefault();
-    event.stopPropagation();
-    const isSaved = savedUrls.has(article.url);
-    if (isSaved) {
-      await fetch('/api/saved', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: article.url }),
-      });
-      savedUrls.delete(article.url);
-    } else {
-      await fetch('/api/saved', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(article),
-      });
-      savedUrls.add(article.url);
-    }
-    // Update all star buttons for this URL across the page
-    document.querySelectorAll(`.star-btn[data-url="${CSS.escape(article.url)}"]`).forEach(b => {
-      b.classList.toggle('saved', !isSaved);
-      b.title = isSaved ? 'Save article' : 'Unsave article';
+// ── Helpers ────────────────────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function readTime(text) {
+  const words = (text || '').trim().split(/\s+/).length;
+  return Math.max(1, Math.ceil(words / 200));
+}
+
+function fmtDate(iso, opts) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('en-US', opts || { month:'short', day:'numeric', year:'numeric' });
+}
+
+function isWithinDays(iso, days) {
+  if (!iso) return false;
+  return (Date.now() - new Date(iso).getTime()) < days * 86400000;
+}
+
+// ── Meta (reactions, notes, folder, progress) ──────────────────────────────
+async function loadBulkMeta(urls) {
+  if (!urls.length) return;
+  try {
+    const res = await fetch('/api/meta/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ urls }),
     });
-    // Refresh saved tab if open
-    if (document.getElementById('tab-saved').classList.contains('active')) {
-      loadSaved();
-    }
-  }
-
-  async function loadSaved() {
-    const res = await fetch('/api/saved');
     const data = await res.json();
-    const articles = data.saved || [];
-    savedUrls = new Set(articles.map(a => a.url));
+    Object.assign(articleMeta, data);
+  } catch {}
+}
 
-    const statusEl = document.getElementById('saved-status');
-    const grid = document.getElementById('saved-grid');
-    const countEl = document.getElementById('saved-count');
+async function saveMeta(url, patch) {
+  articleMeta[url] = Object.assign(articleMeta[url] || {}, patch);
+  await fetch('/api/meta', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url, ...patch }),
+  });
+}
 
-    if (articles.length === 0) {
-      statusEl.innerHTML = '<div class="big">☆</div><div>No saved articles yet.</div><span style="font-size:0.88rem;margin-top:0.5rem;display:block">Star any article in your Feed or Article of the Day to save it here.</span>';
-      statusEl.style.display = 'block';
-      grid.innerHTML = '';
-      countEl.textContent = '';
-      return;
+// ── Reactions ──────────────────────────────────────────────────────────────
+const REACTIONS = ['👍','❤️','🔖'];
+const REACTION_KEYS = ['like','love','bookmark'];
+
+async function toggleReaction(url, key) {
+  const meta = articleMeta[url] || {};
+  const reactions = meta.reactions || {};
+  reactions[key] = !reactions[key];
+  await saveMeta(url, { reactions });
+  updateReactionButtons(url);
+}
+
+function updateReactionButtons(url) {
+  const reactions = (articleMeta[url] || {}).reactions || {};
+  // Update card buttons
+  document.querySelectorAll(`.reaction-btn[data-url="${CSS.escape(url)}"]`).forEach(btn => {
+    const k = btn.dataset.key;
+    btn.classList.toggle('active', !!reactions[k]);
+  });
+  // Update reader bar
+  document.querySelectorAll(`.reader-reaction-btn[data-key]`).forEach(btn => {
+    if (btn.closest('#reader-reactions-bar') && readerCurrentUrl === url) {
+      btn.classList.toggle('active', !!reactions[btn.dataset.key]);
     }
+  });
+}
 
-    statusEl.style.display = 'none';
-    countEl.textContent = `${articles.length} saved`;
-    grid.innerHTML = '';
-    articles.forEach(a => renderCard(a, grid));
+function renderReactionButtons(url, small = true) {
+  const reactions = (articleMeta[url] || {}).reactions || {};
+  return REACTION_KEYS.map((k, i) =>
+    `<button class="${small ? 'reaction-btn' : 'reader-reaction-btn'} ${reactions[k] ? 'active' : ''}"
+      data-url="${escHtml(url)}" data-key="${k}"
+      onclick="event.stopPropagation();toggleReaction('${escHtml(url)}','${k}')"
+      title="${REACTIONS[i]}">${REACTIONS[i]}</button>`
+  ).join('');
+}
+
+function renderReaderReactions(url) {
+  const bar = document.getElementById('reader-reactions-bar');
+  if (!bar) return;
+  const reactions = (articleMeta[url] || {}).reactions || {};
+  bar.innerHTML = REACTION_KEYS.map((k, i) =>
+    `<button class="reader-reaction-btn ${reactions[k] ? 'active' : ''}" data-key="${k}"
+      onclick="toggleReaction('${escHtml(url)}','${k}')"
+      title="${REACTIONS[i]}">${REACTIONS[i]}</button>`
+  ).join('');
+}
+
+// ── Share ──────────────────────────────────────────────────────────────────
+async function shareArticle() {
+  const url = readerCurrentUrl;
+  const title = readerCurrentArticle?.title || '';
+  if (navigator.share) {
+    try { await navigator.share({ title, url }); return; } catch {}
   }
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast('🔗 Link copied to clipboard!');
+  } catch {
+    showToast('Could not copy link');
+  }
+}
 
-  /* ── Article card builder ── */
+async function shareCardArticle(url, title) {
+  if (navigator.share) {
+    try { await navigator.share({ title, url }); return; } catch {}
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast('🔗 Link copied!');
+  } catch {}
+}
 
-  function renderCard(a, grid) {
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.style.cursor = 'pointer';
-
-    const date = a.publishedAt
-      ? new Date(a.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-      : '';
-
-    card.innerHTML = `
-      ${a.image ? `<img src="${escHtml(a.image)}" alt="" loading="lazy" onerror="this.style.display='none'">` : ''}
-      <button class="star-btn ${savedUrls.has(a.url) ? 'saved' : ''}"
-              data-url="${escHtml(a.url)}"
-              title="${savedUrls.has(a.url) ? 'Unsave article' : 'Save article'}">★</button>
-      <div class="card-body">
-        ${a.source ? `<div class="card-source">${escHtml(a.source)}</div>` : ''}
-        <div class="card-title">${escHtml(a.title)}</div>
-        ${a.description ? `<div class="card-desc">${escHtml(a.description)}</div>` : ''}
-        ${date ? `<div class="card-date">${date}</div>` : ''}
-      </div>
-    `;
-
-    card.addEventListener('click', () => openReader(a));
-
-    const star = card.querySelector('.star-btn');
-    star.addEventListener('click', (e) => {
-      e.stopPropagation();
-      toggleSave(a, star);
+// ── Saved articles ──────────────────────────────────────────────────────────
+async function toggleSave(article, btn) {
+  const isSaved = savedUrls.has(article.url);
+  if (isSaved) {
+    await fetch('/api/saved', {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: article.url }),
     });
+    savedUrls.delete(article.url);
+  } else {
+    await fetch('/api/saved', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(article),
+    });
+    savedUrls.add(article.url);
+    precacheArticle(article.url);
+  }
+  document.querySelectorAll(`.star-btn[data-url="${CSS.escape(article.url)}"]`).forEach(b => {
+    b.classList.toggle('saved', !isSaved);
+    b.title = isSaved ? 'Save article' : 'Unsave article';
+  });
+  // Update folder row in reader
+  if (readerCurrentUrl === article.url) {
+    updateReaderFolderRow(article.url);
+  }
+  if (document.getElementById('tab-saved').classList.contains('active')) {
+    loadSaved();
+  }
+}
 
-    grid.appendChild(card);
+function switchFolder(folder) {
+  currentFolder = folder;
+  document.querySelectorAll('.folder-tab').forEach(b => b.classList.toggle('active', b.dataset.folder === folder));
+  loadSaved();
+}
+
+async function loadSaved() {
+  const res = await fetch('/api/saved');
+  const data = await res.json();
+  let articles = data.saved || [];
+  savedUrls = new Set(articles.map(a => a.url));
+  // Merge server meta into articleMeta
+  articles.forEach(a => { if (a._meta) articleMeta[a.url] = a._meta; });
+
+  // Filter by folder
+  let filtered = articles;
+  if (currentFolder === 'all') {
+    filtered = articles.filter(a => !((a._meta || {}).folder === 'archive'));
+  } else if (currentFolder === 'archive') {
+    filtered = articles.filter(a => (a._meta || {}).folder === 'archive');
+  } else {
+    filtered = articles.filter(a => (a._meta || {}).folder === currentFolder);
   }
 
-  /* ── Feed ── */
+  const statusEl = document.getElementById('saved-status');
+  const grid     = document.getElementById('saved-grid');
+  const countEl  = document.getElementById('saved-count');
 
-  function showFeedStatus(type, icon, title, extra = '') {
-    const el = document.getElementById('feed-status');
-    if (type === 'spinner') {
-      el.innerHTML = `<div class="spinner"></div>${title}`;
-    } else {
-      el.innerHTML = `<div class="big">${icon}</div><div>${title}</div>${extra}`;
-    }
-    el.style.display = 'block';
-    document.getElementById('articles-grid').innerHTML = '';
-  }
+  countEl.textContent = `${articles.length} saved`;
 
-  async function loadArticles() {
-    showFeedStatus('spinner', '', 'Fetching articles…');
-    document.getElementById('feed-meta').textContent = '';
-
-    const res = await fetch('/api/articles');
-    const data = await res.json();
-
-    if (data.error === 'no_api_key') {
-      showFeedStatus('emoji', '🔑', 'No API key set.',
-        '<span class="hint">Add your NewsAPI key in the <b>Settings</b> tab.</span>');
-      return;
-    }
-    if (data.error === 'no_interests') {
-      showFeedStatus('emoji', '✦', 'No interests selected.',
-        '<span class="hint">Go to <b>Settings</b> and choose some topics.</span>');
-      return;
-    }
-    if (data.error) {
-      showFeedStatus('emoji', '⚠', 'Error: ' + data.error, '');
-      return;
-    }
-
-    const articles = data.articles;
-    document.getElementById('feed-status').style.display = 'none';
-    document.getElementById('feed-meta').textContent = `${articles.length} articles`;
-
-    const grid = document.getElementById('articles-grid');
-    grid.innerHTML = '';
-    articles.forEach(a => renderCard(a, grid));
-  }
-
-  /* ── Article of the Day ── */
-
-  function next5am() {
-    const now = new Date();
-    const candidate = new Date(now);
-    candidate.setHours(5, 0, 0, 0);
-    if (now >= candidate) candidate.setDate(candidate.getDate() + 1);
-    const diff = candidate - now;
-    const h = Math.floor(diff / 3600000);
-    const m = Math.floor((diff % 3600000) / 60000);
-    return `${h}h ${m}m`;
-  }
-
-  let aodLoaded = false;
-  let aodArticle = null;
-
-  async function loadAod() {
-    if (aodLoaded) {
-      // Refresh star state
-      if (aodArticle) updateAodStar(aodArticle);
-      return;
-    }
-    const statusEl = document.getElementById('aod-status');
-    const container = document.getElementById('aod-container');
-    const resetsEl = document.getElementById('aod-resets');
-
-    statusEl.innerHTML = '<div class="spinner"></div>Finding today\'s top story…';
+  if (filtered.length === 0) {
+    const msgs = {
+      all: 'Star any article to save it here.',
+      'read-later': 'Move articles here from the reader.',
+      favorites: 'Move articles here from the reader.',
+      archive: 'Archived articles will appear here.',
+    };
+    statusEl.innerHTML = `<div class="big">☆</div><div>${msgs[currentFolder] || 'Nothing here yet.'}</div>`;
     statusEl.style.display = 'block';
-    container.innerHTML = '';
+    grid.innerHTML = '';
+    return;
+  }
 
-    const res = await fetch('/api/article-of-day');
-    const data = await res.json();
+  statusEl.style.display = 'none';
+  grid.innerHTML = '';
+  filtered.forEach(a => renderCard(a, grid, { showFolder: true }));
+}
 
-    statusEl.style.display = 'none';
+async function changeArticleFolder(folder) {
+  if (!readerCurrentUrl) return;
+  await saveMeta(readerCurrentUrl, { folder: folder || null });
+  if (document.getElementById('tab-saved').classList.contains('active')) loadSaved();
+}
 
-    if (data.error === 'no_api_key') {
-      statusEl.innerHTML = '<div class="big">🔑</div><div>No API key set.</div><span class="hint">Add your NewsAPI key in <b>Settings</b>.</span>';
-      statusEl.style.display = 'block';
-      return;
-    }
-    if (data.error) {
-      statusEl.innerHTML = `<div class="big">⚠</div><div>${escHtml(data.error)}</div>`;
-      statusEl.style.display = 'block';
-      return;
-    }
+async function updateReaderFolderRow(url) {
+  const folderRow = document.getElementById('reader-folder-row');
+  const folderSel = document.getElementById('reader-folder-select');
+  if (savedUrls.has(url)) {
+    const meta = articleMeta[url] || {};
+    folderSel.value = meta.folder || '';
+    folderRow.style.display = 'flex';
+  } else {
+    folderRow.style.display = 'none';
+  }
+}
 
-    aodLoaded = true;
-    aodArticle = data.article;
-    resetsEl.textContent = `Resets in ${next5am()} · at 5:00 AM`;
+// ── Export to PDF ──────────────────────────────────────────────────────────
+function exportToPdf() {
+  window.print();
+}
 
-    const a = aodArticle;
-    const date = a.publishedAt
-      ? new Date(a.publishedAt).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
-      : '';
-    const isSaved = savedUrls.has(a.url);
+// ── Archive from reader ────────────────────────────────────────────────────
+async function archiveCurrentArticle() {
+  if (!readerCurrentUrl) return;
+  await saveMeta(readerCurrentUrl, { folder: 'archive' });
+  document.getElementById('reader-folder-select').value = 'archive';
+  showToast('📦 Moved to Archive');
+}
 
-    container.innerHTML = `
-      <div class="aod-card">
-        ${a.image ? `<img src="${escHtml(a.image)}" alt="" onerror="this.style.display='none'">` : ''}
-        <div class="aod-body">
-          <div class="aod-badge">★ &nbsp;Article of the Day</div>
-          ${a.source ? `<div class="aod-source">${escHtml(a.source)}</div>` : ''}
-          <div class="aod-title">${escHtml(a.title)}</div>
-          ${a.description ? `<div class="aod-desc">${escHtml(a.description)}</div>` : ''}
-          <div class="aod-footer">
-            ${date ? `<div class="aod-date">${date}</div>` : '<div></div>'}
-            <div style="display:flex;gap:0.75rem;align-items:center;">
-              <button class="aod-star-btn ${isSaved ? 'saved' : ''}" id="aod-star-btn">
-                ★ ${isSaved ? 'Saved' : 'Save'}
-              </button>
-              <button class="aod-link" onclick="openReader(${JSON.stringify(a).replace(/</g,'\\u003c')})">Read Full Article →</button>
-            </div>
+// ── Notes ──────────────────────────────────────────────────────────────────
+async function saveNote() {
+  const url  = readerCurrentUrl;
+  const note = document.getElementById('reader-notes').value.trim();
+  await saveMeta(url, { notes: note });
+  const msg = document.getElementById('note-saved-msg');
+  msg.classList.add('show');
+  setTimeout(() => msg.classList.remove('show'), 2000);
+}
+
+// ── Card builder ────────────────────────────────────────────────────────────
+function renderCard(a, grid, opts = {}) {
+  const meta   = articleMeta[a.url] || {};
+  const folder = meta.folder || '';
+  const isSaved = savedUrls.has(a.url);
+  const date   = fmtDate(a.publishedAt);
+  const rt     = readTime((a.title || '') + ' ' + (a.description || ''));
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.dataset.url = a.url;
+
+  const folderBadge = opts.showFolder && folder
+    ? `<span class="folder-badge" data-folder="${escHtml(folder)}">${FOLDER_LABELS[folder] || folder}</span>`
+    : '';
+
+  const rankBadge = opts.rank !== undefined
+    ? `<div class="trending-rank">#${opts.rank}</div>`
+    : '';
+
+  card.innerHTML = `
+    ${a.image ? `<img src="${escHtml(a.image)}" alt="" loading="lazy" onerror="this.style.display='none'">` : ''}
+    ${rankBadge}
+    <button class="star-btn ${isSaved ? 'saved' : ''}" data-url="${escHtml(a.url)}"
+      title="${isSaved ? 'Unsave' : 'Save'}">★</button>
+    <div class="card-body">
+      <div class="card-top-row">
+        ${a.source ? `<div class="card-source">${escHtml(a.source)}</div>` : '<div></div>'}
+        <div class="card-read-time">${rt} min read</div>
+      </div>
+      <div class="card-title">${escHtml(a.title)}</div>
+      ${a.description ? `<div class="card-desc">${escHtml(a.description)}</div>` : ''}
+      <div class="card-footer">
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          ${date ? `<div class="card-date">${date}</div>` : ''}
+          ${folderBadge}
+        </div>
+        <div class="card-actions">
+          ${renderReactionButtons(a.url)}
+          <button class="share-card-btn" data-url="${escHtml(a.url)}" title="Share">⬆</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  card.addEventListener('click', () => openReader(a));
+
+  card.querySelector('.star-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    toggleSave(a, e.currentTarget);
+  });
+  card.querySelector('.share-card-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    shareCardArticle(a.url, a.title);
+  });
+
+  grid.appendChild(card);
+}
+
+// ── Feed ────────────────────────────────────────────────────────────────────
+function showFeedStatus(type, icon, title, extra = '') {
+  const el = document.getElementById('feed-status');
+  if (type === 'spinner') {
+    el.innerHTML = `<div class="spinner"></div>${title}`;
+  } else {
+    el.innerHTML = `<div class="big">${icon}</div><div>${title}</div>${extra}`;
+  }
+  el.style.display = 'block';
+  document.getElementById('articles-grid').innerHTML = '';
+}
+
+async function loadArticles() {
+  showFeedStatus('spinner', '', 'Fetching articles…');
+  document.getElementById('feed-meta').textContent = '';
+  document.getElementById('feed-filter-chips').innerHTML = '';
+  activeFilterChips.clear();
+  document.getElementById('search-input').value = '';
+
+  const res  = await fetch('/api/articles');
+  const data = await res.json();
+
+  if (data.error === 'no_api_key') {
+    showFeedStatus('emoji','🔑','No API key set.','<span class="hint">Add your NewsAPI key in <b>Settings</b>.</span>');
+    return;
+  }
+  if (data.error === 'no_interests') {
+    showFeedStatus('emoji','✦','No interests selected.','<span class="hint">Go to <b>Settings</b> and choose topics.</span>');
+    return;
+  }
+  if (data.error) {
+    showFeedStatus('emoji','⚠','Error: ' + data.error,'');
+    return;
+  }
+
+  allFeedArticles = data.articles || [];
+
+  // Bulk-load metadata for all articles
+  await loadBulkMeta(allFeedArticles.map(a => a.url));
+
+  document.getElementById('feed-status').style.display = 'none';
+  document.getElementById('feed-meta').textContent = `${allFeedArticles.length} articles`;
+
+  buildFilterChips();
+  renderFeedGrid();
+}
+
+function buildFilterChips() {
+  const tagCounts = {};
+  allFeedArticles.forEach(a => (a.tags || []).forEach(t => { tagCounts[t] = (tagCounts[t] || 0) + 1; }));
+
+  const chipsEl = document.getElementById('feed-filter-chips');
+  chipsEl.innerHTML = '';
+
+  // Only show tags that appear in at least 2 articles (or all if few)
+  const tags = Object.entries(tagCounts)
+    .filter(([,c]) => c >= 1)
+    .sort((a,b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([t]) => t);
+
+  tags.forEach(tag => {
+    const chip = document.createElement('button');
+    chip.className = 'feed-chip';
+    chip.textContent = tag;
+    chip.addEventListener('click', () => {
+      chip.classList.toggle('active');
+      if (chip.classList.contains('active')) activeFilterChips.add(tag);
+      else activeFilterChips.delete(tag);
+      renderFeedGrid();
+    });
+    chipsEl.appendChild(chip);
+  });
+}
+
+function filterFeed() {
+  renderFeedGrid();
+}
+
+function renderFeedGrid() {
+  const query  = (document.getElementById('search-input').value || '').toLowerCase();
+  const grid   = document.getElementById('articles-grid');
+  grid.innerHTML = '';
+
+  let visible = allFeedArticles;
+
+  // Category filter
+  if (activeFilterChips.size > 0) {
+    visible = visible.filter(a => (a.tags || []).some(t => activeFilterChips.has(t)));
+  }
+
+  // Text search
+  if (query) {
+    visible = visible.filter(a =>
+      (a.title || '').toLowerCase().includes(query) ||
+      (a.description || '').toLowerCase().includes(query)
+    );
+  }
+
+  visible.forEach(a => renderCard(a, grid));
+
+  const meta = document.getElementById('feed-meta');
+  meta.textContent = visible.length !== allFeedArticles.length
+    ? `${visible.length} of ${allFeedArticles.length} articles`
+    : `${allFeedArticles.length} articles`;
+}
+
+// ── Article of the Day ──────────────────────────────────────────────────────
+function next5am() {
+  const now = new Date();
+  const c = new Date(now); c.setHours(5,0,0,0);
+  if (now >= c) c.setDate(c.getDate() + 1);
+  const diff = c - now;
+  return `${Math.floor(diff/3600000)}h ${Math.floor((diff%3600000)/60000)}m`;
+}
+
+let aodLoaded = false, aodArticle = null;
+
+async function loadAod() {
+  if (aodLoaded) { if (aodArticle) updateAodStar(aodArticle); return; }
+
+  const statusEl   = document.getElementById('aod-status');
+  const container  = document.getElementById('aod-container');
+  const resetsEl   = document.getElementById('aod-resets');
+
+  statusEl.innerHTML = '<div class="spinner"></div>Finding today\'s top story…';
+  statusEl.style.display = 'block';
+  container.innerHTML = '';
+
+  const res  = await fetch('/api/article-of-day');
+  const data = await res.json();
+  statusEl.style.display = 'none';
+
+  if (data.error === 'no_api_key') {
+    statusEl.innerHTML = '<div class="big">🔑</div><div>No API key set.</div><span class="hint">Add your NewsAPI key in Settings.</span>';
+    statusEl.style.display = 'block';
+    return;
+  }
+  if (data.error) {
+    statusEl.innerHTML = `<div class="big">⚠</div><div>${escHtml(data.error)}</div>`;
+    statusEl.style.display = 'block';
+    return;
+  }
+
+  aodLoaded  = true;
+  aodArticle = data.article;
+  resetsEl.textContent = `Resets in ${next5am()} · at 5:00 AM`;
+
+  const a      = aodArticle;
+  const date   = fmtDate(a.publishedAt, { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+  const isSaved = savedUrls.has(a.url);
+
+  container.innerHTML = `
+    <div class="aod-card">
+      ${a.image ? `<img src="${escHtml(a.image)}" alt="" onerror="this.style.display='none'">` : ''}
+      <div class="aod-body">
+        <div class="aod-badge">★ &nbsp;Article of the Day</div>
+        ${a.source ? `<div class="aod-source">${escHtml(a.source)}</div>` : ''}
+        <div class="aod-title">${escHtml(a.title)}</div>
+        ${a.description ? `<div class="aod-desc">${escHtml(a.description)}</div>` : ''}
+        <div class="aod-footer">
+          ${date ? `<div class="aod-date">${date}</div>` : '<div></div>'}
+          <div style="display:flex;gap:0.75rem;align-items:center;">
+            <button class="aod-star-btn ${isSaved ? 'saved' : ''}" id="aod-star-btn">
+              ★ ${isSaved ? 'Saved' : 'Save'}
+            </button>
+            <button class="aod-link" onclick="openReader(${JSON.stringify(a).replace(/</g,'\\u003c')})">Read Full Article →</button>
           </div>
         </div>
       </div>
-    `;
+    </div>
+  `;
 
-    document.getElementById('aod-star-btn').addEventListener('click', async () => {
-      const isSaved = savedUrls.has(a.url);
-      if (isSaved) {
-        await fetch('/api/saved', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: a.url }) });
-        savedUrls.delete(a.url);
-      } else {
-        await fetch('/api/saved', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(a) });
-        savedUrls.add(a.url);
-      }
-      updateAodStar(a);
-    });
-  }
-
-  function updateAodStar(a) {
-    const btn = document.getElementById('aod-star-btn');
-    if (!btn) return;
-    const isSaved = savedUrls.has(a.url);
-    btn.classList.toggle('saved', isSaved);
-    btn.textContent = `★ ${isSaved ? 'Saved' : 'Save'}`;
-  }
-
-  /* ── Settings ── */
-
-  function renderChips() {
-    const container = document.getElementById('interest-chips');
-    container.innerHTML = '';
-    INTERESTS.forEach(interest => {
-      const chip = document.createElement('div');
-      chip.className = 'chip' + (selected.has(interest) ? ' selected' : '');
-      chip.textContent = interest;
-      chip.onclick = () => {
-        if (selected.has(interest)) selected.delete(interest);
-        else selected.add(interest);
-        chip.classList.toggle('selected');
-      };
-      container.appendChild(chip);
-    });
-  }
-
-  function selectAll() { INTERESTS.forEach(i => selected.add(i)); renderChips(); }
-  function clearAll() { selected.clear(); renderChips(); }
-
-  async function saveInterests() {
-    await fetch('/api/config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ selected_interests: [...selected] }),
-    });
-    const el = document.getElementById('save-status');
-    el.classList.add('show');
-    setTimeout(() => el.classList.remove('show'), 2000);
-  }
-
-  /* ── API key management ── */
-
-  let newKeySlotCount = 0;
-
-  function renderKeysList(maskedKeys) {
-    const container = document.getElementById('keys-list');
-    container.innerHTML = '';
-    if (!maskedKeys.length) return;
-
-    const items = maskedKeys.map((k, i) => `
-      <div class="key-item">
-        <span class="key-idx">Key ${i + 1}</span>
-        <span class="key-label">${escHtml(k)}</span>
-        <button class="key-delete-btn" title="Remove key" onclick="deleteKey(${i})">×</button>
-      </div>
-    `).join('');
-
-    if (maskedKeys.length > 3) {
-      container.innerHTML = `
-        <details class="keys-dropdown">
-          <summary>${maskedKeys.length} API keys saved</summary>
-          <div class="keys-inner">${items}</div>
-        </details>`;
+  document.getElementById('aod-star-btn').addEventListener('click', async () => {
+    const sv = savedUrls.has(a.url);
+    if (sv) {
+      await fetch('/api/saved', { method:'DELETE', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url:a.url}) });
+      savedUrls.delete(a.url);
     } else {
-      container.innerHTML = items;
+      await fetch('/api/saved', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(a) });
+      savedUrls.add(a.url);
+      precacheArticle(a.url);
     }
-  }
-
-  function addKeySlot() {
-    newKeySlotCount++;
-    const saveRow = document.getElementById('keys-save-row');
-    saveRow.style.display = 'flex';
-
-    const slotsEl = document.getElementById('new-key-slots');
-    const id = `new-key-${newKeySlotCount}`;
-    const slot = document.createElement('div');
-    slot.className = 'new-key-slot';
-    slot.id = `slot-${id}`;
-    slot.innerHTML = `
-      <input type="text" id="${id}" placeholder="Paste API key here…" autocomplete="off" spellcheck="false" />
-      <button class="remove-slot-btn" title="Remove" onclick="removeSlot('slot-${id}')">×</button>
-    `;
-    slotsEl.appendChild(slot);
-    document.getElementById(id).focus();
-  }
-
-  function removeSlot(slotId) {
-    document.getElementById(slotId)?.remove();
-    if (!document.getElementById('new-key-slots').children.length) {
-      document.getElementById('keys-save-row').style.display = 'none';
-    }
-  }
-
-  async function saveNewKeys() {
-    const inputs = document.querySelectorAll('#new-key-slots input');
-    const newKeys = [...inputs].map(i => i.value.trim()).filter(Boolean);
-    if (!newKeys.length) return;
-
-    // Fetch current keys count to append
-    const cfg = await fetch('/api/config').then(r => r.json());
-    const currentCount = cfg.api_keys_count || 0;
-
-    // We send all keys: existing (by count, server keeps them) + new ones
-    // Use a dedicated merge endpoint — POST /api/keys/add for new ones
-    await fetch('/api/keys/add', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ keys: newKeys }),
-    });
-
-    // Refresh display
-    const updated = await fetch('/api/config').then(r => r.json());
-    renderKeysList(updated.api_keys || []);
-    document.getElementById('new-key-slots').innerHTML = '';
-    document.getElementById('keys-save-row').style.display = 'none';
-    newKeySlotCount = 0;
-
-    if (updated.has_api_key) {
-      document.getElementById('setup-banner').style.display = 'none';
-    }
-
-    const el = document.getElementById('keys-save-status');
-    el.classList.add('show');
-    setTimeout(() => el.classList.remove('show'), 2000);
-  }
-
-  async function deleteKey(idx) {
-    if (!confirm('Remove this API key?')) return;
-    await fetch(`/api/keys/${idx}`, { method: 'DELETE' });
-    const cfg = await fetch('/api/config').then(r => r.json());
-    renderKeysList(cfg.api_keys || []);
-    if (!cfg.has_api_key) {
-      document.getElementById('setup-banner').style.display = 'block';
-    }
-  }
-
-  async function saveBannerKey() {
-    const val = document.getElementById('banner-key').value.trim();
-    if (!val) return;
-    await fetch('/api/keys/add', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ keys: [val] }),
-    });
-    document.getElementById('setup-banner').style.display = 'none';
-    const cfg = await fetch('/api/config').then(r => r.json());
-    renderKeysList(cfg.api_keys || []);
-    loadArticles();
-  }
-
-  /* ── Article Reader ── */
-
-  let readerCurrentUrl = '';
-
-  async function openReader(article) {
-    readerCurrentUrl = article.url;
-
-    // Show overlay immediately with loading state
-    document.getElementById('reader-overlay').classList.add('open');
-    document.body.style.overflow = 'hidden';
-    document.getElementById('reader-loading').style.display = 'block';
-    document.getElementById('reader-error').style.display = 'none';
-    document.getElementById('reader-title').style.display = 'none';
-    document.getElementById('reader-content').innerHTML = '';
-    document.getElementById('reader-topbar-title').textContent = article.source || '';
-
-    const meta = [article.source, article.publishedAt
-      ? new Date(article.publishedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-      : ''].filter(Boolean).join(' · ');
-    document.getElementById('reader-meta').textContent = meta;
-    const res = await fetch('/api/read?url=' + encodeURIComponent(article.url));
-    const data = await res.json();
-
-    document.getElementById('reader-loading').style.display = 'none';
-
-    if (data.error) {
-      const errEl = document.getElementById('reader-error');
-      errEl.textContent = data.error + ' — you can still open the article in your browser using the button above.';
-      errEl.style.display = 'block';
-      // Show what we have from the card
-      document.getElementById('reader-title').textContent = article.title || '';
-      document.getElementById('reader-title').style.display = 'block';
-      if (article.description) {
-        document.getElementById('reader-content').innerHTML = `<p>${escHtml(article.description)}</p>`;
-      }
-      return;
-    }
-
-    document.getElementById('reader-title').textContent = data.title || article.title || '';
-    document.getElementById('reader-title').style.display = 'block';
-    // Sanitise: strip script tags from extracted HTML
-    const clean = (data.content || '').replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '');
-    document.getElementById('reader-content').innerHTML = clean;
-  }
-
-  function closeReader() {
-    document.getElementById('reader-overlay').classList.remove('open');
-    document.body.style.overflow = '';
-  }
-
-  function openReaderExternal() {
-    if (readerCurrentUrl) window.open(readerCurrentUrl, '_blank', 'noopener,noreferrer');
-  }
-
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeReader(); closeLightbox(); }
+    updateAodStar(a);
   });
+}
 
-  /* ── NASA Pictures ── */
+function updateAodStar(a) {
+  const btn = document.getElementById('aod-star-btn');
+  if (!btn) return;
+  const sv = savedUrls.has(a.url);
+  btn.classList.toggle('saved', sv);
+  btn.textContent = `★ ${sv ? 'Saved' : 'Save'}`;
+}
 
-  let nasaLoaded = false;
+// ── Reader ──────────────────────────────────────────────────────────────────
+let savedScrollTop = 0;
 
-  async function loadNasa(force = false) {
-    if (nasaLoaded && !force) return;
-    nasaLoaded = true; // set immediately to block concurrent calls
+async function openReader(article) {
+  readerCurrentUrl     = article.url;
+  readerCurrentArticle = article;
 
-    const statusEl = document.getElementById('nasa-status');
-    const grid = document.getElementById('nasa-grid');
-    statusEl.innerHTML = '<div class="spinner"></div>Loading space photos…';
-    statusEl.style.display = 'block';
-    grid.innerHTML = '';
+  const overlay = document.getElementById('reader-overlay');
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
 
-    const res = await fetch('/api/nasa-pictures');
-    const data = await res.json();
-    statusEl.style.display = 'none';
+  // Reset state
+  document.getElementById('reader-loading').style.display = 'block';
+  document.getElementById('reader-error').style.display = 'none';
+  document.getElementById('reader-title').style.display = 'none';
+  document.getElementById('reader-read-time').style.display = 'none';
+  document.getElementById('reader-content').innerHTML = '';
+  document.getElementById('reader-related').style.display = 'none';
+  document.getElementById('reader-related').innerHTML = '';
+  document.getElementById('continue-banner').style.display = 'none';
+  document.getElementById('reader-progress').style.width = '0%';
+  document.getElementById('reader-notes').value = '';
+  document.getElementById('reader-topbar-title').textContent = article.source || '';
+  document.getElementById('reader-folder-row').style.display = 'none';
 
-    if (data.error) {
-      nasaLoaded = false; // allow retry on error
-      statusEl.innerHTML = `<div class="big">🔭</div><div>${escHtml(data.error)}</div><span class="hint">Check your NASA API key in Settings, or try again later.</span>`;
-      statusEl.style.display = 'block';
-      return;
+  const scrollEl = document.getElementById('reader-scroll');
+  scrollEl.scrollTop = 0;
+
+  const meta = [
+    article.source,
+    fmtDate(article.publishedAt, { month:'long', day:'numeric', year:'numeric' })
+  ].filter(Boolean).join(' · ');
+  document.getElementById('reader-meta').textContent = meta;
+
+  // Track view
+  fetch('/api/view', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url: article.url, article }),
+  }).catch(() => {});
+
+  // Load meta (reactions, notes, progress)
+  await loadBulkMeta([article.url]);
+  renderReaderReactions(article.url);
+  await updateReaderFolderRow(article.url);
+
+  // Restore notes
+  document.getElementById('reader-notes').value = (articleMeta[article.url] || {}).notes || '';
+
+  // Check for saved scroll position
+  const savedPos = localStorage.getItem('rp:' + article.url);
+  if (savedPos && parseInt(savedPos) > 200) {
+    savedScrollTop = parseInt(savedPos);
+    document.getElementById('continue-banner').style.display = 'flex';
+  }
+
+  // Fetch content
+  const res  = await fetch('/api/read?url=' + encodeURIComponent(article.url));
+  const data = await res.json();
+  document.getElementById('reader-loading').style.display = 'none';
+
+  if (data.error) {
+    const errEl = document.getElementById('reader-error');
+    errEl.textContent = data.error + ' — you can still open the article in your browser.';
+    errEl.style.display = 'block';
+    document.getElementById('reader-title').textContent = article.title || '';
+    document.getElementById('reader-title').style.display = 'block';
+    if (article.description) {
+      document.getElementById('reader-content').innerHTML = `<p>${escHtml(article.description)}</p>`;
     }
-    const pics = data.pictures || [];
-    document.getElementById('nasa-meta').textContent = `Astronomy Picture of the Day · ${pics.length} photos`;
+    renderRelatedArticles(article);
+    return;
+  }
 
-    pics.forEach(p => {
-      const thumb = p.media_type === 'video' ? p.thumbnail_url : p.url;
-      if (!thumb) return;
+  const title = data.title || article.title || '';
+  document.getElementById('reader-title').textContent = title;
+  document.getElementById('reader-title').style.display = 'block';
 
-      const card = document.createElement('div');
-      card.className = 'nasa-card';
-      card.innerHTML = `
-        <img src="${escHtml(thumb)}" alt="${escHtml(p.title || '')}" loading="lazy" onerror="this.parentElement.style.display='none'">
-        <div class="nasa-card-body">
-          <div class="nasa-card-date">${p.date || ''} ${p.media_type === 'video' ? '· 📹 Video' : ''}</div>
-          <div class="nasa-card-title">${escHtml(p.title || '')}</div>
-          ${p.copyright ? `<div class="nasa-card-copy">© ${escHtml(p.copyright.trim())}</div>` : ''}
+  const clean = (data.content || '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '');
+  document.getElementById('reader-content').innerHTML = clean;
+
+  // Compute read time from full content
+  const words = (clean.replace(/<[^>]+>/g, ' ')).trim().split(/\s+/).length;
+  const mins  = Math.max(1, Math.ceil(words / 200));
+  const rtEl  = document.getElementById('reader-read-time');
+  rtEl.textContent = `About ${mins} min read`;
+  rtEl.style.display = 'block';
+
+  renderRelatedArticles(article);
+}
+
+function restoreScroll() {
+  document.getElementById('continue-banner').style.display = 'none';
+  document.getElementById('reader-scroll').scrollTop = savedScrollTop;
+}
+
+function dismissContinue() {
+  document.getElementById('continue-banner').style.display = 'none';
+  savedScrollTop = 0;
+}
+
+function updateReadProgress() {
+  const el = document.getElementById('reader-scroll');
+  const pct = el.scrollHeight <= el.clientHeight
+    ? 100
+    : (el.scrollTop / (el.scrollHeight - el.clientHeight)) * 100;
+  document.getElementById('reader-progress').style.width = pct + '%';
+  // Save scroll position
+  if (readerCurrentUrl && el.scrollTop > 100) {
+    localStorage.setItem('rp:' + readerCurrentUrl, el.scrollTop);
+  }
+}
+
+function closeReader() {
+  // Save scroll before close
+  const el = document.getElementById('reader-scroll');
+  if (readerCurrentUrl && el.scrollTop > 100) {
+    localStorage.setItem('rp:' + readerCurrentUrl, el.scrollTop);
+  }
+  document.getElementById('reader-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function openReaderExternal() {
+  if (readerCurrentUrl) window.open(readerCurrentUrl, '_blank', 'noopener,noreferrer');
+}
+
+// ── Related articles ────────────────────────────────────────────────────────
+function renderRelatedArticles(article) {
+  const pool = allFeedArticles.filter(a => a.url !== article.url);
+  if (!pool.length) return;
+
+  // Score by source match + tag overlap
+  const scored = pool.map(a => {
+    let score = 0;
+    if (a.source && a.source === article.source) score += 3;
+    const ta = new Set(a.tags || []);
+    (article.tags || []).forEach(t => { if (ta.has(t)) score += 2; });
+    return { a, score };
+  }).filter(x => x.score > 0).sort((a,b) => b.score - a.score).slice(0, 4);
+
+  if (!scored.length) return;
+
+  const relEl = document.getElementById('reader-related');
+  relEl.innerHTML = `<h3>Related Articles</h3><div class="related-list">${
+    scored.map(({ a }) => `
+      <div class="related-item" onclick="openReader(${JSON.stringify(a).replace(/</g,'\\u003c')})">
+        ${a.image ? `<img class="related-img" src="${escHtml(a.image)}" alt="" onerror="this.style.display='none'" loading="lazy">` : ''}
+        <div class="related-info">
+          ${a.source ? `<div class="related-source">${escHtml(a.source)}</div>` : ''}
+          <div class="related-title">${escHtml(a.title)}</div>
         </div>
-      `;
-      card.addEventListener('click', () => openLightbox(p));
-      grid.appendChild(card);
-    });
+      </div>`).join('')
+  }</div>`;
+  relEl.style.display = 'block';
+}
+
+// ── Trending ──────────────────────────────────────────────────────────────
+let trendingLoaded = false;
+
+async function loadTrending() {
+  if (trendingLoaded) return;
+
+  const statusEl = document.getElementById('trending-status');
+  statusEl.innerHTML = '<div class="spinner"></div>Loading…';
+  statusEl.style.display = 'block';
+
+  const res  = await fetch('/api/trending');
+  const data = await res.json();
+  statusEl.style.display = 'none';
+  trendingLoaded = true;
+
+  const all  = data.trending || [];
+  const weekly = all.filter(a => isWithinDays(a.publishedAt, 7));
+
+  // Load meta for all trending articles
+  await loadBulkMeta(all.map(a => a.url));
+
+  // Weekly digest
+  const weeklyGrid  = document.getElementById('weekly-grid');
+  const weeklyEmpty = document.getElementById('weekly-empty');
+  weeklyGrid.innerHTML = '';
+  if (weekly.length) {
+    weeklyEmpty.style.display = 'none';
+    weekly.forEach((a, i) => renderCard(a, weeklyGrid, { rank: i + 1 }));
+  } else {
+    weeklyEmpty.style.display = 'block';
   }
 
-  function openLightbox(p) {
-    const mediaEl = document.getElementById('lb-media');
-    if (p.media_type === 'video') {
-      // Convert YouTube watch URL to embed URL if needed
-      let src = p.url;
-      const ytMatch = src.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?]+)/);
-      if (ytMatch) src = `https://www.youtube.com/embed/${ytMatch[1]}`;
-      mediaEl.innerHTML = `<iframe src="${escHtml(src)}" allowfullscreen></iframe>`;
-    } else {
-      const imgSrc = p.hdurl || p.url;
-      mediaEl.innerHTML = `<img src="${escHtml(imgSrc)}" alt="${escHtml(p.title || '')}">`;
-    }
+  // All-time trending
+  const tGrid  = document.getElementById('trending-grid');
+  const tEmpty = document.getElementById('trending-empty');
+  tGrid.innerHTML = '';
+  if (all.length) {
+    tEmpty.style.display = 'none';
+    all.forEach((a, i) => renderCard(a, tGrid, { rank: i + 1 }));
+  } else {
+    tEmpty.style.display = 'block';
+  }
+}
 
-    document.getElementById('lb-meta').textContent = p.date || '';
-    document.getElementById('lb-title').textContent = p.title || '';
-    document.getElementById('lb-desc').textContent = p.explanation || '';
+// ── NASA ──────────────────────────────────────────────────────────────────
+let nasaLoaded = false;
 
-    const dlLink = document.getElementById('lb-download-link');
-    const hdLink = document.getElementById('lb-hd-link');
-    if (p.media_type !== 'video') {
-      const imgUrl = p.hdurl || p.url;
-      const filename = (p.title || 'nasa-image').replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.jpg';
-      dlLink.href = imgUrl;
-      dlLink.download = filename;
-      dlLink.style.display = '';
-      if (p.hdurl) {
-        hdLink.href = p.hdurl;
-        hdLink.style.display = '';
-      } else {
-        hdLink.style.display = 'none';
-      }
-    } else {
-      dlLink.style.display = 'none';
-      hdLink.style.display = 'none';
-    }
-    document.getElementById('lb-nasa-link').href = `https://apod.nasa.gov/apod/ap${(p.date || '').replace(/-/g, '').slice(2)}.html`;
+async function loadNasa(force = false) {
+  if (nasaLoaded && !force) return;
+  nasaLoaded = true;
 
-    document.getElementById('lightbox').classList.add('open');
-    document.body.style.overflow = 'hidden';
+  const statusEl = document.getElementById('nasa-status');
+  const grid     = document.getElementById('nasa-grid');
+  statusEl.innerHTML = '<div class="spinner"></div>Loading space photos…';
+  statusEl.style.display = 'block';
+  grid.innerHTML = '';
+
+  const res  = await fetch('/api/nasa-pictures');
+  const data = await res.json();
+  statusEl.style.display = 'none';
+
+  if (data.error) {
+    nasaLoaded = false;
+    statusEl.innerHTML = `<div class="big">🔭</div><div>${escHtml(data.error)}</div><span class="hint">Check your NASA API key in Settings.</span>`;
+    statusEl.style.display = 'block';
+    return;
   }
 
-  function closeLightbox() {
-    document.getElementById('lightbox').classList.remove('open');
-    document.getElementById('lb-media').innerHTML = '';
-    document.body.style.overflow = '';
+  const pics = data.pictures || [];
+  document.getElementById('nasa-meta').textContent = `Astronomy Picture of the Day · ${pics.length} photos`;
+
+  pics.forEach(p => {
+    const thumb = p.media_type === 'video' ? p.thumbnail_url : p.url;
+    if (!thumb) return;
+    const card = document.createElement('div');
+    card.className = 'nasa-card';
+    card.innerHTML = `
+      <img src="${escHtml(thumb)}" alt="${escHtml(p.title||'')}" loading="lazy" onerror="this.parentElement.style.display='none'">
+      <div class="nasa-card-body">
+        <div class="nasa-card-date">${p.date||''} ${p.media_type==='video'?'· 📹 Video':''}</div>
+        <div class="nasa-card-title">${escHtml(p.title||'')}</div>
+        ${p.copyright ? `<div class="nasa-card-copy">© ${escHtml(p.copyright.trim())}</div>` : ''}
+      </div>`;
+    card.addEventListener('click', () => openLightbox(p));
+    grid.appendChild(card);
+  });
+}
+
+function openLightbox(p) {
+  const mediaEl = document.getElementById('lb-media');
+  if (p.media_type === 'video') {
+    let src = p.url;
+    const yt = src.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?]+)/);
+    if (yt) src = `https://www.youtube.com/embed/${yt[1]}`;
+    mediaEl.innerHTML = `<iframe src="${escHtml(src)}" allowfullscreen></iframe>`;
+  } else {
+    mediaEl.innerHTML = `<img src="${escHtml(p.hdurl||p.url)}" alt="${escHtml(p.title||'')}">`;
   }
 
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+  document.getElementById('lb-meta').textContent   = p.date || '';
+  document.getElementById('lb-title').textContent  = p.title || '';
+  document.getElementById('lb-desc').textContent   = p.explanation || '';
 
-  /* ── NASA key settings ── */
+  const dlLink = document.getElementById('lb-download-link');
+  const hdLink = document.getElementById('lb-hd-link');
+  if (p.media_type !== 'video') {
+    const imgUrl   = p.hdurl || p.url;
+    const filename = (p.title||'nasa-image').replace(/[^a-z0-9]/gi,'_').toLowerCase()+'.jpg';
+    dlLink.href = imgUrl; dlLink.download = filename; dlLink.style.display = '';
+    hdLink.href = p.hdurl || ''; hdLink.style.display = p.hdurl ? '' : 'none';
+  } else {
+    dlLink.style.display = 'none';
+    hdLink.style.display = 'none';
+  }
+  document.getElementById('lb-nasa-link').href =
+    `https://apod.nasa.gov/apod/ap${(p.date||'').replace(/-/g,'').slice(2)}.html`;
 
-  async function renderNasaKeyDisplay(cfg) {
-    const display = document.getElementById('nasa-key-display');
-    const field = document.getElementById('nasa-key-field');
-    if (cfg.has_nasa_key) {
-      display.innerHTML = `
-        <div class="key-item" style="margin-bottom:0.75rem;">
-          <span class="key-idx">NASA Key</span>
-          <span class="key-label">${escHtml(cfg.nasa_key_masked)}</span>
-          <button class="key-delete-btn" title="Remove" onclick="deleteNasaKey()">×</button>
-        </div>`;
-      field.style.display = 'none';
-    } else {
-      display.innerHTML = '';
-      field.style.display = 'flex';
-    }
+  document.getElementById('lightbox').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.getElementById('lb-media').innerHTML = '';
+  document.body.style.overflow = '';
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────
+function renderChips() {
+  const container = document.getElementById('interest-chips');
+  container.innerHTML = '';
+  INTERESTS.forEach(interest => {
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (selected.has(interest) ? ' selected' : '');
+    chip.textContent = interest;
+    chip.onclick = () => {
+      if (selected.has(interest)) selected.delete(interest); else selected.add(interest);
+      chip.classList.toggle('selected');
+    };
+    container.appendChild(chip);
+  });
+}
+
+function selectAll() { INTERESTS.forEach(i => selected.add(i)); renderChips(); }
+function clearAll()  { selected.clear(); renderChips(); }
+
+async function saveInterests() {
+  await fetch('/api/config', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ selected_interests: [...selected] }),
+  });
+  const el = document.getElementById('save-status');
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// ── API keys ──────────────────────────────────────────────────────────────
+let newKeySlotCount = 0;
+
+function renderKeysList(maskedKeys) {
+  const container = document.getElementById('keys-list');
+  container.innerHTML = '';
+  if (!maskedKeys.length) return;
+  const items = maskedKeys.map((k, i) => `
+    <div class="key-item">
+      <span class="key-idx">Key ${i+1}</span>
+      <span class="key-label">${escHtml(k)}</span>
+      <button class="key-delete-btn" title="Remove" onclick="deleteKey(${i})">×</button>
+    </div>`).join('');
+  if (maskedKeys.length > 3) {
+    container.innerHTML = `<details class="keys-dropdown"><summary>${maskedKeys.length} API keys saved</summary><div class="keys-inner">${items}</div></details>`;
+  } else {
+    container.innerHTML = items;
+  }
+}
+
+function addKeySlot() {
+  newKeySlotCount++;
+  document.getElementById('keys-save-row').style.display = 'flex';
+  const slotsEl = document.getElementById('new-key-slots');
+  const id = `new-key-${newKeySlotCount}`;
+  const slot = document.createElement('div');
+  slot.className = 'new-key-slot'; slot.id = `slot-${id}`;
+  slot.innerHTML = `
+    <input type="text" id="${id}" placeholder="Paste API key here…" autocomplete="off" spellcheck="false" />
+    <button class="remove-slot-btn" title="Remove" onclick="removeSlot('slot-${id}')">×</button>`;
+  slotsEl.appendChild(slot);
+  document.getElementById(id).focus();
+}
+
+function removeSlot(slotId) {
+  document.getElementById(slotId)?.remove();
+  if (!document.getElementById('new-key-slots').children.length) {
+    document.getElementById('keys-save-row').style.display = 'none';
+  }
+}
+
+async function saveNewKeys() {
+  const inputs  = document.querySelectorAll('#new-key-slots input');
+  const newKeys = [...inputs].map(i => i.value.trim()).filter(Boolean);
+  if (!newKeys.length) return;
+  await fetch('/api/keys/add', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ keys: newKeys }),
+  });
+  const updated = await fetch('/api/config').then(r => r.json());
+  renderKeysList(updated.api_keys || []);
+  document.getElementById('new-key-slots').innerHTML = '';
+  document.getElementById('keys-save-row').style.display = 'none';
+  newKeySlotCount = 0;
+  if (updated.has_api_key) document.getElementById('setup-banner').style.display = 'none';
+  const el = document.getElementById('keys-save-status');
+  el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+async function deleteKey(idx) {
+  if (!confirm('Remove this API key?')) return;
+  await fetch(`/api/keys/${idx}`, { method: 'DELETE' });
+  const cfg = await fetch('/api/config').then(r => r.json());
+  renderKeysList(cfg.api_keys || []);
+  if (!cfg.has_api_key) document.getElementById('setup-banner').style.display = 'block';
+}
+
+async function saveBannerKey() {
+  const val = document.getElementById('banner-key').value.trim();
+  if (!val) return;
+  await fetch('/api/keys/add', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ keys: [val] }),
+  });
+  document.getElementById('setup-banner').style.display = 'none';
+  const cfg = await fetch('/api/config').then(r => r.json());
+  renderKeysList(cfg.api_keys || []);
+  loadArticles();
+}
+
+// ── NASA key ──────────────────────────────────────────────────────────────
+async function renderNasaKeyDisplay(cfg) {
+  const display = document.getElementById('nasa-key-display');
+  const field   = document.getElementById('nasa-key-field');
+  if (cfg.has_nasa_key) {
+    display.innerHTML = `
+      <div class="key-item" style="margin-bottom:0.75rem;">
+        <span class="key-idx">NASA Key</span>
+        <span class="key-label">${escHtml(cfg.nasa_key_masked)}</span>
+        <button class="key-delete-btn" title="Remove" onclick="deleteNasaKey()">×</button>
+      </div>`;
+    field.style.display = 'none';
+  } else {
+    display.innerHTML = '';
+    field.style.display = 'flex';
+  }
+}
+
+async function saveNasaKey() {
+  const val = document.getElementById('nasa-key-input').value.trim();
+  if (!val) return;
+  await fetch('/api/nasa-key', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({key:val}) });
+  document.getElementById('nasa-key-input').value = '';
+  const cfg = await fetch('/api/config').then(r => r.json());
+  renderNasaKeyDisplay(cfg);
+  nasaLoaded = false;
+}
+
+async function deleteNasaKey() {
+  if (!confirm('Remove NASA API key?')) return;
+  await fetch('/api/nasa-key', { method:'DELETE' });
+  const cfg = await fetch('/api/config').then(r => r.json());
+  renderNasaKeyDisplay(cfg);
+}
+
+// ── Tab switching ──────────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('tab-' + name + '-btn').classList.add('active');
+  if (name === 'aod')      loadAod();
+  if (name === 'nasa')     loadNasa();
+  if (name === 'saved')    loadSaved();
+  if (name === 'trending') loadTrending();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+async function init() {
+  initTheme();
+  applyFontSize();
+  registerSW();
+
+  const [cfg, savedRes] = await Promise.all([
+    fetch('/api/config').then(r => r.json()),
+    fetch('/api/saved').then(r => r.json()),
+  ]);
+  selected  = new Set(cfg.selected_interests || []);
+  savedUrls = new Set((savedRes.saved || []).map(a => a.url));
+
+  renderChips();
+  renderKeysList(cfg.api_keys || []);
+  renderNasaKeyDisplay(cfg);
+
+  if (!cfg.has_api_key) {
+    document.getElementById('setup-banner').style.display = 'block';
   }
 
-  async function saveNasaKey() {
-    const val = document.getElementById('nasa-key-input').value.trim();
-    if (!val) return;
-    await fetch('/api/nasa-key', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key: val }),
-    });
-    document.getElementById('nasa-key-input').value = '';
-    const cfg = await fetch('/api/config').then(r => r.json());
-    renderNasaKeyDisplay(cfg);
-    nasaLoaded = false; // force refresh next time tab opens
+  if (cfg.has_api_key) {
+    if (selected.size > 0) loadArticles();
+    else showFeedStatus('emoji','✦','Pick some interests in Settings.',
+      '<span class="hint">Click <b>Settings</b> and choose topics you care about.</span>');
+  } else {
+    showFeedStatus('emoji','🔑','No API key yet.',
+      '<span class="hint">Paste your NewsAPI key above to get started.</span>');
   }
+}
 
-  async function deleteNasaKey() {
-    if (!confirm('Remove NASA API key?')) return;
-    await fetch('/api/nasa-key', { method: 'DELETE' });
-    const cfg = await fetch('/api/config').then(r => r.json());
-    renderNasaKeyDisplay(cfg);
-  }
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeReader(); closeLightbox(); }
+});
 
-  function escHtml(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
-
-  init();
+init();
 </script>
 </body>
 </html>

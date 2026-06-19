@@ -3,12 +3,16 @@ import os
 import re
 import requests
 from datetime import datetime, timedelta
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_from_directory
 from readability import Document
 
 app = Flask(__name__)
 
-CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
+CONFIG_FILE    = os.path.join(os.path.dirname(__file__), "config.json")
+NASA_CACHE_FILE = os.path.join(os.path.dirname(__file__), "nasa_cache.json")
+META_FILE      = os.path.join(os.path.dirname(__file__), "articles_meta.json")
+VIEWS_FILE     = os.path.join(os.path.dirname(__file__), "view_counts.json")
+NASA_CACHE_TTL_HOURS = 24
 
 AOD_SOURCES = "bbc-news,reuters,associated-press,the-wall-street-journal,the-new-york-times,bloomberg,the-washington-post"
 
@@ -40,15 +44,26 @@ AD_RE = re.compile(
 )
 
 
-# ── Config helpers ──────────────────────────────────────────────────────────
+# ── Generic file helpers ────────────────────────────────────────────────────
+
+def _load(path, default=None):
+    if default is None:
+        default = {}
+    if os.path.exists(path):
+        with open(path) as f:
+            return json.load(f)
+    return default
+
+
+def _save(path, data):
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2)
+
+
+# ── Config ──────────────────────────────────────────────────────────────────
 
 def load_config():
-    if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE) as f:
-            cfg = json.load(f)
-    else:
-        cfg = {}
-    # Migrate legacy single api_key → api_keys list
+    cfg = _load(CONFIG_FILE)
     if "api_key" in cfg and cfg["api_key"] and "api_keys" not in cfg:
         cfg["api_keys"] = [cfg["api_key"]]
         del cfg["api_key"]
@@ -59,8 +74,7 @@ def load_config():
 
 
 def save_config(data):
-    with open(CONFIG_FILE, "w") as f:
-        json.dump(data, f, indent=2)
+    _save(CONFIG_FILE, data)
 
 
 def mask_key(key):
@@ -69,17 +83,15 @@ def mask_key(key):
     return key[:4] + "..." + key[-4:]
 
 
-# ── API key rotation ────────────────────────────────────────────────────────
+# ── NewsAPI rotation ────────────────────────────────────────────────────────
 
 RATE_LIMITED_CODES = {"rateLimited", "maximumResultsReached"}
 
 
 def newsapi_get(endpoint, params, cfg):
-    """Try each API key in rotation. Returns (data_dict, error_str)."""
     keys = cfg.get("api_keys", [])
     if not keys:
         return None, "no_api_key"
-
     start = cfg.get("last_key_idx", 0) % len(keys)
     for i in range(len(keys)):
         idx = (start + i) % len(keys)
@@ -90,20 +102,15 @@ def newsapi_get(endpoint, params, cfg):
                 timeout=10,
             )
             data = resp.json()
-        except Exception as e:
-            continue  # network error, try next key
-
+        except Exception:
+            continue
         if data.get("status") == "ok":
             cfg["last_key_idx"] = idx
             save_config(cfg)
             return data, None
-
         if data.get("code") in RATE_LIMITED_CODES:
-            continue  # this key is exhausted, try next
-
-        # Any other API error — return it as-is (wrong key, bad params, etc.)
+            continue
         return data, data.get("message", "API error")
-
     return None, "All API keys are rate-limited or unavailable"
 
 
@@ -156,11 +163,16 @@ def current_period_start():
     return cutoff.isoformat()
 
 
-# ── Routes ──────────────────────────────────────────────────────────────────
+# ── Routes: config & keys ───────────────────────────────────────────────────
 
 @app.route("/")
 def index():
     return render_template("index.html", interests=INTERESTS)
+
+
+@app.route("/static/<path:filename>")
+def static_files(filename):
+    return send_from_directory(os.path.join(os.path.dirname(__file__), "static"), filename)
 
 
 @app.route("/api/config", methods=["GET"])
@@ -225,6 +237,8 @@ def delete_key(idx):
     return jsonify({"error": "invalid index"}), 400
 
 
+# ── Routes: articles ────────────────────────────────────────────────────────
+
 @app.route("/api/articles")
 def get_articles():
     cfg = load_config()
@@ -247,8 +261,8 @@ def get_articles():
     articles = []
     for a in data.get("articles", []):
         title = a.get("title") or ""
-        desc = a.get("description") or ""
-        url = a.get("url") or ""
+        desc  = a.get("description") or ""
+        url   = a.get("url") or ""
         if not title or not url or "[Removed]" in title:
             continue
         if not is_english(title, desc):
@@ -257,11 +271,13 @@ def get_articles():
             continue
         if not matches_interests(title, desc, interests):
             continue
+        tags = [i for i in interests if matches_interests(title, desc, [i])]
         articles.append({
             "title": title, "description": desc, "url": url,
             "image": a.get("urlToImage"),
             "source": a.get("source", {}).get("name"),
             "publishedAt": a.get("publishedAt"),
+            "tags": tags,
         })
 
     return jsonify({"articles": articles})
@@ -272,21 +288,15 @@ def get_article_of_day():
     cfg = load_config()
     if not cfg.get("api_keys"):
         return jsonify({"error": "no_api_key"}), 400
-
     if cfg.get("aod_period") == current_period_start() and cfg.get("aod_article"):
         return jsonify({"article": cfg["aod_article"], "cached": True})
 
-    data, err = newsapi_get("top-headlines", {
-        "sources": AOD_SOURCES, "pageSize": 10,
-    }, cfg)
-
+    data, err = newsapi_get("top-headlines", {"sources": AOD_SOURCES, "pageSize": 10}, cfg)
     if err:
         return jsonify({"error": err}), 400
 
-    articles = [
-        a for a in data.get("articles", [])
-        if a.get("title") and a.get("url") and "[Removed]" not in (a.get("title") or "")
-    ]
+    articles = [a for a in data.get("articles", [])
+                if a.get("title") and a.get("url") and "[Removed]" not in (a.get("title") or "")]
     if not articles:
         return jsonify({"error": "No articles found"}), 404
 
@@ -317,21 +327,123 @@ def read_article():
         resp.raise_for_status()
     except Exception as e:
         return jsonify({"error": f"Could not fetch article: {e}"}), 502
-
     try:
         doc = Document(resp.text)
-        return jsonify({
-            "title": doc.title(),
-            "content": doc.summary(html_partial=True),
-        })
+        return jsonify({"title": doc.title(), "content": doc.summary(html_partial=True)})
     except Exception as e:
         return jsonify({"error": f"Could not parse article: {e}"}), 500
 
 
+# ── Routes: view tracking & trending ───────────────────────────────────────
+
+@app.route("/api/view", methods=["POST"])
+def track_view():
+    data    = request.get_json()
+    url     = (data or {}).get("url")
+    article = (data or {}).get("article")
+    if not url:
+        return jsonify({"ok": True})
+    counts = _load(VIEWS_FILE)
+    entry  = counts.get(url, {"count": 0})
+    entry["count"] += 1
+    if article:
+        entry["article"] = article
+    counts[url] = entry
+    _save(VIEWS_FILE, counts)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/trending")
+def get_trending():
+    counts = _load(VIEWS_FILE)
+    ranked = sorted(counts.items(), key=lambda x: x[1].get("count", 0), reverse=True)
+    trending = []
+    for _, v in ranked[:10]:
+        if v.get("article"):
+            a = dict(v["article"])
+            a["view_count"] = v["count"]
+            trending.append(a)
+    return jsonify({"trending": trending})
+
+
+# ── Routes: article metadata (reactions, notes, folder, archive, progress) ─
+
+@app.route("/api/meta", methods=["GET"])
+def get_meta():
+    url = request.args.get("url", "")
+    if not url:
+        return jsonify({"meta": {}})
+    meta = _load(META_FILE)
+    return jsonify({"meta": meta.get(url, {})})
+
+
+@app.route("/api/meta/bulk", methods=["POST"])
+def get_meta_bulk():
+    """Return metadata for multiple URLs at once."""
+    urls = (request.get_json() or {}).get("urls", [])
+    meta = _load(META_FILE)
+    return jsonify({u: meta.get(u, {}) for u in urls})
+
+
+@app.route("/api/meta", methods=["POST"])
+def update_meta():
+    data = request.get_json()
+    url  = (data or {}).get("url")
+    if not url:
+        return jsonify({"error": "no url"}), 400
+    meta = _load(META_FILE)
+    entry = meta.get(url, {})
+    for field in ("reactions", "notes", "folder", "archived", "read_progress"):
+        if field in data:
+            entry[field] = data[field]
+    meta[url] = entry
+    _save(META_FILE, meta)
+    return jsonify({"ok": True})
+
+
+# ── Routes: saved articles ──────────────────────────────────────────────────
+
+@app.route("/api/saved", methods=["GET"])
+def get_saved():
+    cfg   = load_config()
+    saved = cfg.get("saved_articles", [])
+    meta  = _load(META_FILE)
+    # Attach per-article metadata inline
+    for a in saved:
+        a["_meta"] = meta.get(a.get("url", ""), {})
+    return jsonify({"saved": saved})
+
+
+@app.route("/api/saved", methods=["POST"])
+def save_article():
+    article = request.get_json()
+    if not article or not article.get("url"):
+        return jsonify({"error": "invalid"}), 400
+    cfg   = load_config()
+    saved = cfg.get("saved_articles", [])
+    if not any(a["url"] == article["url"] for a in saved):
+        saved.insert(0, article)
+    cfg["saved_articles"] = saved
+    save_config(cfg)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/saved", methods=["DELETE"])
+def unsave_article():
+    url = (request.get_json() or {}).get("url")
+    if not url:
+        return jsonify({"error": "invalid"}), 400
+    cfg = load_config()
+    cfg["saved_articles"] = [a for a in cfg.get("saved_articles", []) if a["url"] != url]
+    save_config(cfg)
+    return jsonify({"ok": True})
+
+
+# ── Routes: NASA ────────────────────────────────────────────────────────────
+
 @app.route("/api/nasa-key", methods=["POST"])
 def set_nasa_key():
-    data = request.get_json()
-    key = (data.get("key") or "").strip()
+    key = ((request.get_json() or {}).get("key") or "").strip()
     cfg = load_config()
     cfg["nasa_api_key"] = key
     save_config(cfg)
@@ -346,52 +458,36 @@ def delete_nasa_key():
     return jsonify({"ok": True})
 
 
-NASA_CACHE_FILE = os.path.join(os.path.dirname(__file__), "nasa_cache.json")
-NASA_CACHE_TTL_HOURS = 24
-
-
 def load_nasa_cache():
-    if os.path.exists(NASA_CACHE_FILE):
-        with open(NASA_CACHE_FILE) as f:
-            return json.load(f)
-    return {}
+    return _load(NASA_CACHE_FILE)
 
 
 def save_nasa_cache(data):
-    with open(NASA_CACHE_FILE, "w") as f:
-        json.dump(data, f)
+    _save(NASA_CACHE_FILE, data)
 
 
 @app.route("/api/nasa-pictures")
 def get_nasa_pictures():
-    cfg = load_config()
-    key = cfg.get("nasa_api_key") or "DEMO_KEY"
-
-    # Return cache if fresh enough
+    cfg   = load_config()
+    key   = cfg.get("nasa_api_key") or "DEMO_KEY"
     cache = load_nasa_cache()
+
     cached_at = cache.get("cached_at")
     if cached_at and cache.get("pictures"):
-        age_hours = (datetime.now() - datetime.fromisoformat(cached_at)).total_seconds() / 3600
-        if age_hours < NASA_CACHE_TTL_HOURS:
+        age = (datetime.now() - datetime.fromisoformat(cached_at)).total_seconds() / 3600
+        if age < NASA_CACHE_TTL_HOURS:
             return jsonify({"pictures": cache["pictures"], "cached": True})
 
-    # Fetch fresh from NASA
-    end = datetime.now()
+    end   = datetime.now()
     start = end - timedelta(days=30)
     try:
-        resp = requests.get(
-            "https://api.nasa.gov/planetary/apod",
-            params={
-                "start_date": start.strftime("%Y-%m-%d"),
-                "end_date": end.strftime("%Y-%m-%d"),
-                "thumbs": "true",
-                "api_key": key,
-            },
-            timeout=15,
-        )
+        resp = requests.get("https://api.nasa.gov/planetary/apod", params={
+            "start_date": start.strftime("%Y-%m-%d"),
+            "end_date":   end.strftime("%Y-%m-%d"),
+            "thumbs": "true", "api_key": key,
+        }, timeout=15)
         data = resp.json()
     except Exception as e:
-        # Return stale cache rather than an error if we have one
         if cache.get("pictures"):
             return jsonify({"pictures": cache["pictures"], "cached": True, "stale": True})
         return jsonify({"error": str(e)}), 500
@@ -406,48 +502,14 @@ def get_nasa_pictures():
     pictures = []
     for item in reversed(data if isinstance(data, list) else []):
         pictures.append({
-            "title": item.get("title"),
-            "date": item.get("date"),
-            "explanation": item.get("explanation"),
-            "url": item.get("url"),
-            "hdurl": item.get("hdurl"),
-            "media_type": item.get("media_type"),
-            "thumbnail_url": item.get("thumbnail_url"),
-            "copyright": item.get("copyright"),
+            "title": item.get("title"), "date": item.get("date"),
+            "explanation": item.get("explanation"), "url": item.get("url"),
+            "hdurl": item.get("hdurl"), "media_type": item.get("media_type"),
+            "thumbnail_url": item.get("thumbnail_url"), "copyright": item.get("copyright"),
         })
 
     save_nasa_cache({"pictures": pictures, "cached_at": datetime.now().isoformat()})
     return jsonify({"pictures": pictures, "cached": False})
-
-
-@app.route("/api/saved", methods=["GET"])
-def get_saved():
-    return jsonify({"saved": load_config().get("saved_articles", [])})
-
-
-@app.route("/api/saved", methods=["POST"])
-def save_article():
-    article = request.get_json()
-    if not article or not article.get("url"):
-        return jsonify({"error": "invalid"}), 400
-    cfg = load_config()
-    saved = cfg.get("saved_articles", [])
-    if not any(a["url"] == article["url"] for a in saved):
-        saved.insert(0, article)
-    cfg["saved_articles"] = saved
-    save_config(cfg)
-    return jsonify({"ok": True})
-
-
-@app.route("/api/saved", methods=["DELETE"])
-def unsave_article():
-    url = request.get_json().get("url")
-    if not url:
-        return jsonify({"error": "invalid"}), 400
-    cfg = load_config()
-    cfg["saved_articles"] = [a for a in cfg.get("saved_articles", []) if a["url"] != url]
-    save_config(cfg)
-    return jsonify({"ok": True})
 
 
 if __name__ == "__main__":
