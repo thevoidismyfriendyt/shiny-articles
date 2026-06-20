@@ -1,8 +1,11 @@
+import ipaddress
 import json
 import os
 import re
+import socket
 import requests
 from datetime import datetime, timedelta
+from urllib.parse import urlparse
 from flask import Flask, jsonify, render_template, request, send_from_directory
 from readability import Document
 
@@ -82,6 +85,24 @@ def mask_key(key):
     if len(key) <= 8:
         return "****"
     return key[:4] + "..." + key[-4:]
+
+
+# ── SSRF guard ──────────────────────────────────────────────────────────────
+
+def is_public_url(url):
+    """Reject non-http(s) schemes and hosts resolving to private/loopback/link-local IPs."""
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https") or not parsed.hostname:
+            return False
+        addrs = socket.getaddrinfo(parsed.hostname, None)
+        for *_, sockaddr in addrs:
+            ip = ipaddress.ip_address(sockaddr[0])
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
+                return False
+        return True
+    except Exception:
+        return False
 
 
 # ── NewsAPI rotation ────────────────────────────────────────────────────────
@@ -338,6 +359,8 @@ def read_article():
     url = request.args.get("url", "").strip()
     if not url:
         return jsonify({"error": "No URL provided"}), 400
+    if not is_public_url(url):
+        return jsonify({"error": "URL not allowed"}), 400
     try:
         resp = requests.get(url, timeout=12, headers={
             "User-Agent": "Mozilla/5.0 (compatible; ShinyArticles/1.0)",
