@@ -30,7 +30,7 @@
       --reader-font-size: 1.05rem;
     }
 
-    body.light {
+    body[data-theme="light"] {
       --bg: #f0f4f8;
       --surface: #ffffff;
       --surface2: #e8edf3;
@@ -38,6 +38,42 @@
       --muted: #64748b;
       --border: #cbd5e1;
       --card-hover: #f1f5f9;
+    }
+
+    body[data-theme="pink"] {
+      --bg: #fff0f6;
+      --surface: #ffffff;
+      --surface2: #ffe1ec;
+      --accent: #ec4899;
+      --accent2: #f472b6;
+      --text: #831843;
+      --muted: #be185d;
+      --border: #fbcfe8;
+      --card-hover: #ffe4ef;
+    }
+
+    body[data-theme="beach"] {
+      --bg: #fdf6e3;
+      --surface: #ffffff;
+      --surface2: #fdecc8;
+      --accent: #0d9488;
+      --accent2: #f59e0b;
+      --text: #1e3a3a;
+      --muted: #92765a;
+      --border: #fde68a;
+      --card-hover: #fdecc8;
+    }
+
+    body[data-theme="sky"] {
+      --bg: #eff6ff;
+      --surface: #ffffff;
+      --surface2: #dbeafe;
+      --accent: #3b82f6;
+      --accent2: #0ea5e9;
+      --text: #1e3a5f;
+      --muted: #64748b;
+      --border: #bfdbfe;
+      --card-hover: #dbeafe;
     }
 
     body {
@@ -311,7 +347,7 @@
       transition: transform 0.15s, background 0.15s;
       z-index: 2;
     }
-    body.light .star-btn { background: rgba(255,255,255,0.82); }
+    body.light-bg .star-btn { background: rgba(255,255,255,0.82); }
     .star-btn:hover { transform: scale(1.2); }
     .star-btn.saved { color: #fbbf24; }
     .star-btn:not(.saved) { color: #8892a4; }
@@ -393,6 +429,16 @@
     }
     .chip:hover { border-color: var(--accent2); color: var(--text); }
     .chip.selected { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+    .theme-swatches { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+    .theme-swatch {
+      display: flex; align-items: center; gap: 0.55rem; background: var(--surface);
+      border: 1.5px solid var(--border); border-radius: 999px; color: var(--text);
+      cursor: pointer; font-size: 0.88rem; padding: 0.45rem 1.1rem 0.45rem 0.5rem;
+      transition: all 0.15s; user-select: none;
+    }
+    .theme-swatch:hover { border-color: var(--accent2); }
+    .theme-swatch.selected { border-color: var(--accent); font-weight: 600; box-shadow: 0 0 0 2px var(--accent) inset; }
+    .theme-swatch-dot { width: 1.3rem; height: 1.3rem; border-radius: 50%; border: 1px solid var(--border); flex-shrink: 0; }
     .settings-actions { display: flex; gap: 0.75rem; align-items: center; margin-top: 1.5rem; }
     .save-status { font-size: 0.88rem; color: var(--success); opacity: 0; transition: opacity 0.3s; }
     .save-status.show { opacity: 1; }
@@ -468,7 +514,7 @@
       font-size: var(--reader-font-size);
       line-height: 1.85; color: #c8d0dc;
     }
-    body.light .reader-content { color: var(--text); }
+    body.light-bg .reader-content { color: var(--text); }
     .reader-content p { margin-bottom: 1.2rem; }
     .reader-content h1, .reader-content h2, .reader-content h3 { color: var(--text); margin: 1.8rem 0 0.8rem; line-height: 1.35; }
     .reader-content h1 { font-size: 1.4rem; }
@@ -675,7 +721,7 @@
         <h1>Your Feed</h1>
         <div class="meta" id="feed-meta"></div>
       </div>
-      <button class="btn" onclick="loadArticles()">↺ Refresh</button>
+      <button class="btn" onclick="loadArticles(true)">↺ Refresh</button>
     </div>
 
     <div id="feed-status"></div>
@@ -752,6 +798,28 @@
 
   <!-- ── Settings tab ── -->
   <div id="tab-settings" class="tab">
+    <div class="settings-section">
+      <h2>Appearance</h2>
+      <p class="settings-hint" style="margin-bottom:1rem;">Pick a color theme.</p>
+      <div class="theme-swatches" id="theme-swatches">
+        <button class="theme-swatch" data-theme="dark" onclick="setTheme('dark')" title="Dark">
+          <span class="theme-swatch-dot" style="background:linear-gradient(135deg,#0f1117,#6c63ff);"></span>Dark
+        </button>
+        <button class="theme-swatch" data-theme="light" onclick="setTheme('light')" title="Light">
+          <span class="theme-swatch-dot" style="background:linear-gradient(135deg,#f0f4f8,#6c63ff);"></span>Light
+        </button>
+        <button class="theme-swatch" data-theme="pink" onclick="setTheme('pink')" title="Pink">
+          <span class="theme-swatch-dot" style="background:linear-gradient(135deg,#fff0f6,#ec4899);"></span>Pink
+        </button>
+        <button class="theme-swatch" data-theme="beach" onclick="setTheme('beach')" title="Beach">
+          <span class="theme-swatch-dot" style="background:linear-gradient(135deg,#fdf6e3,#0d9488);"></span>Beach
+        </button>
+        <button class="theme-swatch" data-theme="sky" onclick="setTheme('sky')" title="Sky Blue">
+          <span class="theme-swatch-dot" style="background:linear-gradient(135deg,#eff6ff,#3b82f6);"></span>Sky Blue
+        </button>
+      </div>
+    </div>
+
     <div class="settings-section">
       <h2>API Keys</h2>
       <p class="settings-hint" style="margin-bottom:1rem;">
@@ -872,6 +940,7 @@ let savedUrls     = new Set();
 let articleMeta   = {};          // url -> meta object
 let allFeedArticles   = [];      // full loaded list
 let activeFilterChips = new Set(); // active category filter
+let feedCacheSuffix   = '';      // appended to feed-meta text when serving cached articles
 let currentFolder = 'all';
 
 // Reader state
@@ -879,16 +948,36 @@ let readerCurrentUrl     = '';
 let readerCurrentArticle = null;
 
 // ── Theme ──────────────────────────────────────────────────────────────────
+const THEMES = {
+  dark:  { label: 'Dark',     emoji: '🌙', dark: true  },
+  light: { label: 'Light',    emoji: '☀️', dark: false },
+  pink:  { label: 'Pink',     emoji: '🌸', dark: false },
+  beach: { label: 'Beach',    emoji: '🏖️', dark: false },
+  sky:   { label: 'Sky Blue', emoji: '☁️', dark: false },
+};
+
+function applyTheme(id) {
+  if (!THEMES[id]) id = 'dark';
+  document.body.setAttribute('data-theme', id);
+  document.body.classList.toggle('light-bg', !THEMES[id].dark);
+  localStorage.setItem('theme', id);
+  document.getElementById('theme-toggle-btn').textContent = THEMES[id].dark ? '☀️' : '🌙';
+  document.querySelectorAll('.theme-swatch').forEach(el => {
+    el.classList.toggle('selected', el.dataset.theme === id);
+  });
+}
+
 function initTheme() {
-  const t = localStorage.getItem('theme') || 'dark';
-  document.body.classList.toggle('light', t === 'light');
-  document.getElementById('theme-toggle-btn').textContent = t === 'light' ? '🌙' : '☀️';
+  applyTheme(localStorage.getItem('theme') || 'dark');
+}
+
+function setTheme(id) {
+  applyTheme(id);
 }
 
 function toggleTheme() {
-  const isLight = document.body.classList.toggle('light');
-  localStorage.setItem('theme', isLight ? 'light' : 'dark');
-  document.getElementById('theme-toggle-btn').textContent = isLight ? '🌙' : '☀️';
+  const cur = document.body.getAttribute('data-theme') || 'dark';
+  applyTheme(THEMES[cur].dark ? 'light' : 'dark');
 }
 
 // ── Font size ──────────────────────────────────────────────────────────────
@@ -1252,14 +1341,14 @@ function showFeedStatus(type, icon, title, extra = '') {
   document.getElementById('articles-grid').innerHTML = '';
 }
 
-async function loadArticles() {
+async function loadArticles(force = false) {
   showFeedStatus('spinner', '', 'Fetching articles…');
   document.getElementById('feed-meta').textContent = '';
   document.getElementById('feed-filter-chips').innerHTML = '';
   activeFilterChips.clear();
   document.getElementById('search-input').value = '';
 
-  const res  = await fetch('/api/articles');
+  const res  = await fetch('/api/articles' + (force ? '?refresh=1' : ''));
   const data = await res.json();
 
   if (data.error === 'no_api_key') {
@@ -1281,7 +1370,9 @@ async function loadArticles() {
   await loadBulkMeta(allFeedArticles.map(a => a.url));
 
   document.getElementById('feed-status').style.display = 'none';
-  document.getElementById('feed-meta').textContent = `${allFeedArticles.length} articles`;
+  feedCacheSuffix = data.stale ? ' · showing cached results (API unavailable)'
+                  : data.cached ? ' · cached'
+                  : '';
 
   buildFilterChips();
   renderFeedGrid();
@@ -1342,9 +1433,9 @@ function renderFeedGrid() {
   visible.forEach(a => renderCard(a, grid));
 
   const meta = document.getElementById('feed-meta');
-  meta.textContent = visible.length !== allFeedArticles.length
+  meta.textContent = (visible.length !== allFeedArticles.length
     ? `${visible.length} of ${allFeedArticles.length} articles`
-    : `${allFeedArticles.length} articles`;
+    : `${allFeedArticles.length} articles`) + feedCacheSuffix;
 }
 
 // ── Article of the Day ──────────────────────────────────────────────────────

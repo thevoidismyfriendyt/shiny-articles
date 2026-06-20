@@ -13,6 +13,7 @@ NASA_CACHE_FILE = os.path.join(os.path.dirname(__file__), "nasa_cache.json")
 META_FILE      = os.path.join(os.path.dirname(__file__), "articles_meta.json")
 VIEWS_FILE     = os.path.join(os.path.dirname(__file__), "view_counts.json")
 NASA_CACHE_TTL_HOURS = 24
+ARTICLES_CACHE_TTL_MINUTES = 10
 
 AOD_SOURCES = "bbc-news,reuters,associated-press,the-wall-street-journal,the-new-york-times,bloomberg,the-washington-post"
 
@@ -246,6 +247,14 @@ def get_articles():
     if not interests:
         return jsonify({"error": "no_interests"}), 400
 
+    cache_key = "|".join(sorted(interests))
+    force = request.args.get("refresh") == "1"
+    cache = cfg.get("articles_cache")
+    if not force and cache and cache.get("key") == cache_key:
+        cached_at = datetime.fromisoformat(cache["cached_at"])
+        if datetime.now() - cached_at < timedelta(minutes=ARTICLES_CACHE_TTL_MINUTES):
+            return jsonify({"articles": cache["articles"], "cached": True})
+
     data, err = newsapi_get("everything", {
         "q": build_query(interests),
         "sortBy": "publishedAt",
@@ -256,6 +265,9 @@ def get_articles():
     if err == "no_api_key":
         return jsonify({"error": "no_api_key"}), 400
     if err:
+        # All keys rate-limited/failed — fall back to a stale cache rather than erroring out.
+        if cache and cache.get("key") == cache_key:
+            return jsonify({"articles": cache["articles"], "cached": True, "stale": True})
         return jsonify({"error": err}), 400
 
     articles = []
@@ -280,7 +292,14 @@ def get_articles():
             "tags": tags,
         })
 
-    return jsonify({"articles": articles})
+    cfg["articles_cache"] = {
+        "key": cache_key,
+        "articles": articles,
+        "cached_at": datetime.now().isoformat(),
+    }
+    save_config(cfg)
+
+    return jsonify({"articles": articles, "cached": False})
 
 
 @app.route("/api/article-of-day")
