@@ -155,8 +155,9 @@ def get_search_terms(interest):
 
 
 def matches_interests(title, desc, interests):
-    text = f"{title} {desc}".lower()
-    return any(term.lower() in text for i in interests for term in get_search_terms(i))
+    text = f"{title} {desc}"
+    terms = [t for i in interests for t in get_search_terms(i)]
+    return any(re.search(r'\b' + re.escape(term) + r'\b', text, re.IGNORECASE) for term in terms)
 
 
 def build_query(interests):
